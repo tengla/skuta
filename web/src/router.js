@@ -5,7 +5,7 @@ import ChannelListPage from './pages/ChannelListPage.vue'
 import ChannelPage from './pages/ChannelPage.vue'
 import NotFoundPage from './pages/NotFoundPage.vue'
 
-const BRAND = 'kubemq-ce'
+const BRAND = 'Skuta'
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
