@@ -44,7 +44,7 @@ Who it's for, in order:
 The enterprise features such teams would pay for are mostly done: access control, audit logging, revocable API keys, OpenTelemetry, CloudEvents and MCP. The big remaining gap is clustering and high availability, which the move to JetStream makes possible (step 4).
 
 - [ ] **Put this at the top of the README.** Lead with compatibility and the open licence, and keep the comparison with upstream factual.
-- [ ] **Settle the name before publishing images or announcing anything.** "KubeMQ" is likely a trademark of KubeMQ Ltd, and the Apache-2.0 licence covers the code, not the name. A distinct name with "compatible with KubeMQ" in the description is the safer path for a project others adopt. Check whether "kubemq-ce" is acceptable, or pick a new name and keep the module path change in mind.
+- [ ] **Settle the name before publishing images or announcing anything.** "KubeMQ" is likely a trademark of KubeMQ Ltd, and the Apache-2.0 licence covers the code, not the name. A distinct name with "compatible with KubeMQ" in the description is the safer path for a project others adopt. Check whether "kubemq-ce" is acceptable, or pick a new name and keep the module path change in mind. Skuta is chosen (see "Chosen name: Skuta" below); the trademark check and the rename are still open.
 - [ ] **Treat SDK compatibility as the main promise.** The SDK smoke tests in step 1 should cover the Go, Python, Java and .NET SDKs, not just kubemq-js, and a compatibility table in the README should say which SDK versions are tested.
 
 ### 1. CI and a reliable test suite
@@ -110,8 +110,22 @@ This is a maintenance job first. One node stays the default and nothing has to b
 - [ ] **Tag filters on subscriptions,** for example only events with `region=eu`. Messages already carry tags.
 - [ ] **Ordering keys for queues:** messages with the same key go to one consumer at a time. Easier on JetStream.
 
+### Chosen name: Skuta
+
+Chosen 2026-11-01. From Old Norse *skúta*, a light, fast ship; in modern Norwegian *skuta* is simply "the ship". The rename hasn't started, and the trademark check is still open.
+
+Checked 2026-11-01:
+
+- **GitHub:** the `skuta` account belongs to an individual, so the name needs another owner, such as `tengla/skuta` or a new organisation. The only repo found with that exact name is a small e-scooter app with no stars.
+- **Docker Hub:** no `skuta/skuta` or official `skuta` image. Whether the `skuta` namespace is free couldn't be determined.
+- **Packages:** `skuta` isn't taken on npm, PyPI, crates.io or Homebrew.
+- **Domains:** `skuta.com`, `skuta.no` and `skuta.org` have name servers, so they're taken. `skuta.io` and `skuta.dev` have none, so they may be free; confirm with a registrar.
+- **Trademarks:** one web search found nothing, but the EUIPO, USPTO, WIPO and Norwegian registers haven't been searched.
+
 ### Thomas name suggestion
 - Jolle 
+- **Ringhorne:** from Old Norse *Hringhorni*, Baldr's ship, described as the greatest of all ships. Easy to say and spell, but it's a funeral ship, burned with Baldr on board, and also a North Sea oil platform (recalled from memory, needs checking). One web search found no software by that name.
+- **Busse:** a buss was a cargo ship (Medieval Latin *bucia*, Old Norse *búza*), so the name is nautical and also a pun on "message bus". One web search found no message bus by that name, but *Busse* also appears to be German for "buses", a Swiss German word for a fine, and a surname (recalled from memory, needs checking), which would make it harder to search for and own.
 
 
 ### Claude name suggestions
@@ -125,6 +139,7 @@ Candidates, from one web search each at most. None has been checked on GitHub, D
 - **Packetboat:** packet boats carried mail on regular routes, and "packet" is also a networking term. Not searched yet.
 - **Lighter:** the barge that carries cargo between ship and shore, with a hint of "lightweight". Not searched yet, and a common word, so hard to search for.
 - **Wherry:** a light river boat for passengers and goods. No software turned up, but it's obscure and sounds like "worry".
+- **Skidbladnir:** from Old Norse *Skíðblaðnir*, Freyr's ship, which always has a fair wind and folds up to fit in a pocket, a neat image for a single-binary broker. No software turned up in the search, but it's hard to spell and say, and awkward as a CLI command.
 
 Ruled out:
 
