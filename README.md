@@ -1,18 +1,18 @@
-# kubemq-ce
+# Skuta
 
 A self-hosted message broker for queues, pub/sub and request/reply, in a single binary with a built-in web dashboard. It speaks gRPC and REST, and runs anywhere from a laptop to a Kubernetes pod.
 
-kubemq-ce is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-community), licensed under Apache-2.0 like upstream.
+Skuta is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-community), licensed under Apache-2.0 like upstream. It used to be called kubemq-ce. The binary and the CLI are still named `kubemq`.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/dashboard-dark.png">
-  <img alt="The kubemq-ce dashboard: health, throughput, backlog and error-rate tiles, node CPU and heap gauges, and a throughput chart by channel type" src="images/dashboard-light.png">
+  <img alt="The Skuta dashboard: health, throughput, backlog and error-rate tiles, node CPU and heap gauges, and a throughput chart by channel type" src="images/dashboard-light.png">
 </picture>
 
 ## How it differs from upstream
 
 - **No usage reporting.** Upstream sends hostname, a host fingerprint, message counts and environment to `api.kubemq.io` at startup and every 5 minutes. That code is gone.
-- **Runs on Kubernetes.** Upstream refuses to start inside a Kubernetes pod. kubemq-ce starts there like it does anywhere else.
+- **Runs on Kubernetes.** Upstream refuses to start inside a Kubernetes pod. Skuta starts there like it does anywhere else.
 - **A new dashboard, built from source.** Upstream ships its dashboard only as a compiled bundle. This one lives in [`web/`](web) (Vue 3 + Vite) and covers every channel type. See [Web dashboard](#web-dashboard).
 - **Authentication.** Upstream's community edition has authentication settings but ignores them. Here, gRPC and REST clients can be required to send a JWT, and the dashboard asks for one at sign-in. Tokens can be revoked one by one, rules can limit each token to some channels, and an audit log records who did what. See [Authentication](#authentication).
 - **Channel management from the SDKs.** The SDKs' create, list and delete channel calls work. Upstream only answers them in the commercial edition.
@@ -33,8 +33,8 @@ There are no prebuilt images or binaries yet.
 ### Docker
 
 ```bash
-docker build --build-arg VERSION=v2.4.0 -t kubemq-ce .
-docker run -d -p 8080:8080 -p 50000:50000 -p 9090:9090 kubemq-ce
+docker build --build-arg VERSION=v2.4.0 -t skuta .
+docker run -d -p 8080:8080 -p 50000:50000 -p 9090:9090 skuta
 ```
 
 Then open [http://localhost:8080](http://localhost:8080).
@@ -231,7 +231,7 @@ The `kubemq` binary is also a command-line client:
 
 See the CLI reference for [queues](docs/cli/kubemq_queues.md), [events](docs/cli/kubemq_events.md), [events store](docs/cli/kubemq_events_store.md), [commands](docs/cli/kubemq_commands.md) and [queries](docs/cli/kubemq_queries.md).
 
-kubemq-ce keeps upstream's gRPC and REST API, so the upstream KubeMQ SDKs connect to it: [Go](https://github.com/kubemq-io/kubemq-go), [Java](https://github.com/kubemq-io/kubemq-Java), [Python](https://github.com/kubemq-io/kubemq-Python), [Node](https://github.com/kubemq-io/kubemq-js) and [C#](https://github.com/kubemq-io/kubemq-CSharp). Upstream's [documentation](https://docs.kubemq.io/) explains the messaging patterns. The SDKs' channel management calls (`createChannel`, `listChannels`, `deleteChannel` and their per-type variants) work too, and so does the query cache: a query with a cache key gets the stored response of an earlier query with the same key on the same channel, marked as a cache hit, until its TTL runs out. The SDKs disagree on the TTL's unit, so values under 1000 are read as seconds and larger ones as milliseconds.
+Skuta keeps upstream's gRPC and REST API, so the upstream KubeMQ SDKs connect to it: [Go](https://github.com/kubemq-io/kubemq-go), [Java](https://github.com/kubemq-io/kubemq-Java), [Python](https://github.com/kubemq-io/kubemq-Python), [Node](https://github.com/kubemq-io/kubemq-js) and [C#](https://github.com/kubemq-io/kubemq-CSharp). Upstream's [documentation](https://docs.kubemq.io/) explains the messaging patterns. The SDKs' channel management calls (`createChannel`, `listChannels`, `deleteChannel` and their per-type variants) work too, and so does the query cache: a query with a cache key gets the stored response of an earlier query with the same key on the same channel, marked as a cache hit, until its TTL runs out. The SDKs disagree on the TTL's unit, so values under 1000 are read as seconds and larger ones as milliseconds.
 
 ### CloudEvents
 
@@ -278,7 +278,7 @@ go run ./test/bench -list                                         # the scenario
 
 With `-pid` it also reports the server's memory and CPU time. The tool runs on the same machine as the server unless you point `-addr` elsewhere, and then shares its CPU, so compare runs made the same way.
 
-Report bugs in this repository's [issues](https://github.com/tengla/kubemq-ce/issues).
+Report bugs in this repository's [issues](https://github.com/tengla/skuta/issues).
 
 ## License
 
