@@ -3,20 +3,20 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/services/metrics"
 	"go.uber.org/atomic"
 	"io"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/services"
+	"github.com/tengla/skuta/services"
 
 	"google.golang.org/grpc"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -2,12 +2,12 @@ package array
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/client"
-	"github.com/kubemq-io/kubemq-community/pkg/cmap"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/client"
+	"github.com/tengla/skuta/pkg/cmap"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/tracing"
+	"github.com/tengla/skuta/pkg/uuid"
 )
 
 type queueDownstreamTransaction struct {

@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const instrumentationName = "github.com/kubemq-io/kubemq-community"
+const instrumentationName = "github.com/tengla/skuta"
 
 // enabled skips the tag handling entirely while tracing is off.
 var enabled atomic.Bool

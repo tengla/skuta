@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/entities"
 )
 
 func TestMatchChannel(t *testing.T) {

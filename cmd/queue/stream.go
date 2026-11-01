@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/utils"
 	"strconv"
 	"strings"
 )

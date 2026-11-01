@@ -2,20 +2,20 @@ package client
 
 import (
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/entities"
 
 	"sync"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
 	nats "github.com/nats-io/nats.go"
+	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/logging"
 
 	"context"
 
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
+	"github.com/tengla/skuta/pkg/tracing"
 	"go.uber.org/atomic"
 )
 

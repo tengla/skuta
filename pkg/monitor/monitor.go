@@ -2,18 +2,18 @@ package monitor
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/entities"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
 	"fmt"
 
 	"encoding/json"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/client"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/client"
 )
 
 const (

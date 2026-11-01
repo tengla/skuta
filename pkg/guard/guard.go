@@ -5,10 +5,10 @@ package guard
 import (
 	"context"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/audit"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/audit"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/authorization"
 )
 
 type Guard struct {

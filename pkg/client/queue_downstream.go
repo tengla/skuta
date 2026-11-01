@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/uuid"
+	"github.com/tengla/skuta/services/metrics"
 	"go.uber.org/atomic"
 	"sync"
 )

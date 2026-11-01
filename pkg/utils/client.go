@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
 	"github.com/kubemq-io/kubemq-go"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/uuid"
 	"time"
 )
 

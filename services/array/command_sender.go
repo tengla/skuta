@@ -3,9 +3,9 @@ package array
 import (
 	"context"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/monitor"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/monitor"
 )
 
 type CommandSender interface {

@@ -4,17 +4,17 @@ import (
 	"context"
 	"github.com/nats-io/nuid"
 
-	"github.com/kubemq-io/kubemq-community/config"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/config"
 	"sync"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
 	"encoding/json"
 
 	"fmt"
 
-	"github.com/kubemq-io/kubemq-community/pkg/client"
+	"github.com/tengla/skuta/pkg/client"
 )
 
 const middlewareCommChannel = "kubemq_monitor"

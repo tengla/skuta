@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/audit"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/audit"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/guard"
 )
 
 var testJWT = &config.JWTAuthenticationConfig{Key: "dashboard-test-secret-with-enough-length", SignatureType: "HS256"}

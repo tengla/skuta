@@ -2,8 +2,8 @@ package array
 
 import (
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/services/metrics"
 	"math/rand"
 
 	"github.com/nats-io/nuid"
@@ -15,12 +15,12 @@ import (
 
 	"context"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/client"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/monitor"
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/client"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/monitor"
+	"github.com/tengla/skuta/pkg/tracing"
 )
 
 const queueDownstreamClientPoolSize = 200

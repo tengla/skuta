@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	"github.com/labstack/echo/v4"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/services/metrics"
 )
 
 func (s *Server) getQueueHandler(c echo.Context) error {

@@ -5,25 +5,25 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/services/array"
-	"github.com/kubemq-io/kubemq-community/services/broker"
+	"github.com/tengla/skuta/services/array"
+	"github.com/tengla/skuta/services/broker"
 	"io/fs"
 	"path"
 	"strings"
 
-	"github.com/kubemq-io/kubemq-community/services/metrics"
+	"github.com/tengla/skuta/services/metrics"
 
 	"net/http"
 
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/monitor"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/monitor"
 )
 
 var StaticAssets embed.FS

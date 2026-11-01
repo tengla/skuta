@@ -2,8 +2,8 @@ package monitor
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/entities"
 	"testing"
 
 	"github.com/fortytw2/leaktest"

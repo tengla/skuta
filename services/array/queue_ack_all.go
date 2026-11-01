@@ -4,7 +4,7 @@ import (
 	"context"
 	pb "github.com/kubemq-io/protobuf/go"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 )
 
 type AckAllQueueMessages interface {

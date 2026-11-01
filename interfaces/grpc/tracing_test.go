@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/tracing"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"

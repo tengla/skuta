@@ -3,13 +3,13 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
-	test2 "github.com/kubemq-io/kubemq-community/interfaces/test"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/assert"
+	test2 "github.com/tengla/skuta/interfaces/test"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pipe"
+	"github.com/tengla/skuta/services/metrics"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -20,11 +20,11 @@ import (
 	sdk "github.com/kubemq-io/kubemq-go"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
-	"github.com/kubemq-io/kubemq-community/services"
+	"github.com/tengla/skuta/services"
 
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 
 	"context"
 

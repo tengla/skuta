@@ -1,4 +1,4 @@
-module github.com/kubemq-io/kubemq-community
+module github.com/tengla/skuta
 
 go 1.26.0
 

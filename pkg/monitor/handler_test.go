@@ -1,11 +1,11 @@
 package monitor
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
+	"github.com/tengla/skuta/pkg/entities"
 	"os"
 	"testing"
 
-	"github.com/kubemq-io/kubemq-community/services/broker"
+	"github.com/tengla/skuta/services/broker"
 
 	"github.com/fortytw2/leaktest"
 
@@ -17,12 +17,12 @@ import (
 
 	"encoding/json"
 	"github.com/gorilla/websocket"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/client"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/client"
 )
 
 func setupRestApi(ctx context.Context, t *testing.T) (*client.Client, *config.Config, *echo.Echo, *broker.Service) {

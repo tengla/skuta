@@ -2,7 +2,7 @@ package logging
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

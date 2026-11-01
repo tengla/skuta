@@ -2,12 +2,12 @@ package metrics
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/api"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/expfmt"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/api"
 	"go.uber.org/atomic"
 	"net/http"
 	"strings"

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/filewatch"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/filewatch"
+	"github.com/tengla/skuta/pkg/logging"
 )
 
 // revocationCheckInterval is how often the revoked tokens file is checked

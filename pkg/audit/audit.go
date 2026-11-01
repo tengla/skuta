@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/logging"
 )
 
 const (

@@ -9,11 +9,11 @@ import (
 
 	"go.uber.org/atomic"
 
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/storelock"
+	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/storelock"
 
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"

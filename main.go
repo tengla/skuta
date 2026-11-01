@@ -3,8 +3,8 @@ package main
 import (
 	"embed"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/cmd/root"
-	"github.com/kubemq-io/kubemq-community/services/api"
+	"github.com/tengla/skuta/cmd/root"
+	"github.com/tengla/skuta/services/api"
 	"os"
 )
 

@@ -8,15 +8,15 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/api"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/api"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/services/metrics"
 )
 
 // The MCP (Model Context Protocol) server lets AI agents list channels, read

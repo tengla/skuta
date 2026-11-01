@@ -3,24 +3,24 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/uuid"
+	"github.com/tengla/skuta/services/metrics"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/entities"
 
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 	"go.uber.org/atomic"
 
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	nats "github.com/nats-io/nats.go"
+	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/tracing"
 )
 
 const (

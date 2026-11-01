@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/kubemq-io/kubemq-community/services/metrics"
+	"github.com/tengla/skuta/services/metrics"
 	"time"
 )
 

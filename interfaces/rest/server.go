@@ -6,18 +6,18 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
-	"github.com/kubemq-io/kubemq-community/services"
+	"github.com/tengla/skuta/services"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
 	"net/http"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/pkg/tracing"
 )
 
 type Server struct {

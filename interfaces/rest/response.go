@@ -3,7 +3,7 @@ package rest
 import (
 	"encoding/json"
 
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 
 	"runtime"
 

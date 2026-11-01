@@ -3,9 +3,9 @@ package array
 import (
 	"context"
 	"github.com/fortytw2/leaktest"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/uuid"
 	"testing"
 )
 

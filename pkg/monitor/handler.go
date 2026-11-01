@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
+	"github.com/tengla/skuta/pkg/entities"
 	"strconv"
 
 	"bytes"
@@ -15,8 +15,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
 	"github.com/labstack/echo/v4"
+	"github.com/tengla/skuta/pkg/logging"
 	"go.uber.org/atomic"
 )
 

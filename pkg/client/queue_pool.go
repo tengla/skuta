@@ -3,9 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/cmap"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/cmap"
 	"go.uber.org/atomic"
 	"time"
 )

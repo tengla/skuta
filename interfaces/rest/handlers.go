@@ -3,9 +3,9 @@ package rest
 import (
 	"context"
 	"encoding/json"
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
+	"github.com/tengla/skuta/pkg/authorization"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/services/metrics"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 
 	"github.com/pkg/errors"
 

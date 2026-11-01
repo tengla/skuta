@@ -3,8 +3,8 @@ package array
 import (
 	"errors"
 
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/tracing"
 )
 
 func eventTraceMessage(msg *pb.Event) tracing.Message {

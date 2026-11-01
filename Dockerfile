@@ -5,8 +5,8 @@ ARG BUILD_TIME
 ENV GOPATH=/go
 ENV PATH=$GOPATH:$PATH
 ENV ADDR=0.0.0.0
-ADD . $GOPATH/github.com/kubemq-io/kubemq-community
-WORKDIR $GOPATH/github.com/kubemq-io/kubemq-community
+ADD . $GOPATH/github.com/tengla/skuta
+WORKDIR $GOPATH/github.com/tengla/skuta
 RUN go mod vendor
 RUN CGO_ENABLED=0 go build -a -mod=vendor -installsuffix cgo -ldflags="-w -s -X main.version=$VERSION" -o kubemq-run .
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
@@ -14,7 +14,7 @@ MAINTAINER KubeMQ info@kubemq.io
 ENV GOPATH=/go
 ENV PATH=$GOPATH/bin:$PATH
 RUN mkdir /kubemq
-COPY --from=builder $GOPATH/github.com/kubemq-io/kubemq-community/kubemq-run ./kubemq
+COPY --from=builder $GOPATH/github.com/tengla/skuta/kubemq-run ./kubemq
 COPY entrypoint.sh /
 RUN chown -R 1001:root  /kubemq && chmod g+rwX  /kubemq
 EXPOSE 50000

@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/pipe"
 )
 
 type testBroker struct {

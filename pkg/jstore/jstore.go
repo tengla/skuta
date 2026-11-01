@@ -23,9 +23,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/tengla/skuta/pkg/pipe"
 )
 
 const (

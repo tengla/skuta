@@ -8,11 +8,11 @@ import (
 	"slices"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/filewatch"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
 	"github.com/pkg/errors"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/filewatch"
+	"github.com/tengla/skuta/pkg/logging"
 )
 
 const (

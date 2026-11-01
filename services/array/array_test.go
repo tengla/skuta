@@ -2,9 +2,9 @@ package array
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/pkg/pipe"
 
 	"io/ioutil"
 	"os"
@@ -12,16 +12,16 @@ import (
 
 	"github.com/fortytw2/leaktest"
 
-	"github.com/kubemq-io/kubemq-community/services/broker"
+	"github.com/tengla/skuta/services/broker"
 
 	"time"
 
 	"fmt"
 
-	"github.com/kubemq-io/kubemq-community/config"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
 	"go.uber.org/atomic"
 )
 

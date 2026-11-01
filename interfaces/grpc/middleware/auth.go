@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
+	"github.com/tengla/skuta/pkg/authorization"
+	"github.com/tengla/skuta/pkg/guard"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

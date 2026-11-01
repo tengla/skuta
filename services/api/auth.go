@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
 	"github.com/labstack/echo/v4"
+	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/authorization"
+	"github.com/tengla/skuta/pkg/guard"
 )
 
 // The dashboard signs in with the same JWTs that clients use. After login the

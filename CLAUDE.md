@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-KubeMQ Community: the open-source, single-binary KubeMQ message broker (Go module `github.com/kubemq-io/kubemq-community`). The same `kubemq` binary is both the server (`kubemq server`) and a CLI client (`kubemq events|events_store|commands|queries|queue ...`).
+KubeMQ Community: the open-source, single-binary KubeMQ message broker (Go module `github.com/tengla/skuta`). The same `kubemq` binary is both the server (`kubemq server`) and a CLI client (`kubemq events|events_store|commands|queries|queue ...`).
 
 ## Commands
 

@@ -6,8 +6,8 @@ import (
 
 	pb "github.com/kubemq-io/protobuf/go"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/interfaces/grpc/middleware"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/interfaces/grpc/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"

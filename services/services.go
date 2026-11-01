@@ -3,18 +3,18 @@ package services
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/services/metrics"
 	"go.uber.org/atomic"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/services/api"
-	"github.com/kubemq-io/kubemq-community/services/array"
-	"github.com/kubemq-io/kubemq-community/services/broker"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/services/api"
+	"github.com/tengla/skuta/services/array"
+	"github.com/tengla/skuta/services/broker"
 )
 
 type SystemServices struct {

@@ -2,8 +2,8 @@ package metrics
 
 import (
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/api"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/api"
 
 	"strconv"
 	"strings"

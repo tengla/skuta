@@ -1,8 +1,8 @@
 package authorization
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/entities"
 )
 
 // ChecksFor lists what a client message does, for the message types of the

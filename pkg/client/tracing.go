@@ -1,8 +1,8 @@
 package client
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/tracing"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/tracing"
 )
 
 // The delivery spans name the subscriber, not the sender: the send span

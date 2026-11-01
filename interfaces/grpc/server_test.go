@@ -2,19 +2,19 @@ package grpc
 
 import (
 	"crypto/rand"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
-	"github.com/kubemq-io/kubemq-community/pkg/uuid"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	"github.com/kubemq-io/kubemq-go/queues_stream"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pipe"
+	"github.com/tengla/skuta/pkg/uuid"
+	"github.com/tengla/skuta/services/metrics"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
-	"github.com/kubemq-io/kubemq-community/services"
+	"github.com/tengla/skuta/services"
 
 	"github.com/fortytw2/leaktest"
 	pb "github.com/kubemq-io/protobuf/go"
@@ -26,8 +26,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	test2 "github.com/kubemq-io/kubemq-community/interfaces/test"
+	"github.com/tengla/skuta/config"
+	test2 "github.com/tengla/skuta/interfaces/test"
 
 	"fmt"
 

@@ -2,7 +2,7 @@ package array
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 
 	pb "github.com/kubemq-io/protobuf/go"
 )

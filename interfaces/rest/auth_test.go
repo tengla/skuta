@@ -14,12 +14,12 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	"github.com/gorilla/websocket"
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/audit"
-	"github.com/kubemq-io/kubemq-community/pkg/authentication"
 	sdk "github.com/kubemq-io/kubemq-go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/audit"
+	"github.com/tengla/skuta/pkg/authentication"
 )
 
 func TestRestServer_Authentication(t *testing.T) {

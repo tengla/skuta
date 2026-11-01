@@ -1,8 +1,8 @@
 package metrics
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/entities"
 )
 
 type reportType int32

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/fortytw2/leaktest"
-	"github.com/kubemq-io/kubemq-community/config"
 	sdk "github.com/kubemq-io/kubemq-go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
 	"testing"
 )
 

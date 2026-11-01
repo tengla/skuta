@@ -1,13 +1,13 @@
 package interfaces
 
 import (
-	"github.com/kubemq-io/kubemq-community/services"
+	"github.com/tengla/skuta/services"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/interfaces/grpc"
-	"github.com/kubemq-io/kubemq-community/interfaces/rest"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
-	"github.com/kubemq-io/kubemq-community/services/array"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/interfaces/grpc"
+	"github.com/tengla/skuta/interfaces/rest"
+	"github.com/tengla/skuta/pkg/logging"
+	"github.com/tengla/skuta/services/array"
 )
 
 type Options struct {

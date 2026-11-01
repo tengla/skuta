@@ -2,8 +2,8 @@ package array
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/logging"
 )
 
 type QueueSender interface {

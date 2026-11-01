@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 	"net/http"
 	"regexp"
 	"strings"

@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
+	"github.com/tengla/skuta/pkg/jstore"
 )
 
 type DispatchItem struct {

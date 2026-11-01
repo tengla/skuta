@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
-	"github.com/kubemq-io/kubemq-community/pkg/guard"
 	"github.com/labstack/echo/v4"
+	"github.com/tengla/skuta/pkg/authorization"
+	"github.com/tengla/skuta/pkg/guard"
 )
 
 const guardRequestKey = "guard_request"

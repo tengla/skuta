@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kubemq-io/kubemq-community/config"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/config"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"

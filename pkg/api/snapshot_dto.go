@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/dustin/go-humanize"
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 	"sort"
 	"time"
 )

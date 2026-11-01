@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"github.com/kubemq-io/kubemq-community/pkg/logging"
+	"github.com/tengla/skuta/pkg/logging"
 	"google.golang.org/grpc"
 )
 

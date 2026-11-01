@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/jstore"
 	"time"
 )
 

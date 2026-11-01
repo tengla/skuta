@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
+	"github.com/tengla/skuta/pkg/entities"
 )
 
 type MonitorRequest struct {

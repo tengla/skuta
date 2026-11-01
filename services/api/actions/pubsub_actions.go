@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/api/actions"
-	"github.com/kubemq-io/kubemq-community/services/metrics"
 	sdk "github.com/kubemq-io/kubemq-go"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/api/actions"
+	"github.com/tengla/skuta/services/metrics"
 	"strconv"
 	"time"
 )

@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/config"
-	"github.com/kubemq-io/kubemq-community/pkg/entities"
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
-	"github.com/kubemq-io/kubemq-community/pkg/storelock"
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/pipe"
+	"github.com/tengla/skuta/pkg/storelock"
 )
 
 const (

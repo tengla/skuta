@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/pkg/api"
-	"github.com/kubemq-io/kubemq-community/pkg/api/actions"
-	"github.com/kubemq-io/kubemq-community/pkg/authorization"
 	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/api"
+	"github.com/tengla/skuta/pkg/api/actions"
+	"github.com/tengla/skuta/pkg/authorization"
 )
 
 // storePrefixes maps the channel types that keep messages in JetStream to the

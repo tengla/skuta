@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubemq-io/kubemq-community/pkg/jstore"
 	natsd "github.com/nats-io/nats-server/v2/server"
+	"github.com/tengla/skuta/pkg/jstore"
 )
 
 func toQueues(details []natsd.StreamDetail, prefix string) *Queues {

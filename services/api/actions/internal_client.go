@@ -3,9 +3,9 @@ package actions
 import (
 	"context"
 	"fmt"
-	"github.com/kubemq-io/kubemq-community/pkg/api/actions"
-	"github.com/kubemq-io/kubemq-community/services/array"
-	"github.com/kubemq-io/kubemq-community/services/broker"
+	"github.com/tengla/skuta/pkg/api/actions"
+	"github.com/tengla/skuta/services/array"
+	"github.com/tengla/skuta/services/broker"
 	"go.uber.org/atomic"
 )
 

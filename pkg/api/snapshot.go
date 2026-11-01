@@ -3,7 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/kubemq-io/kubemq-community/config"
+	"github.com/tengla/skuta/config"
 	"time"
 )
 

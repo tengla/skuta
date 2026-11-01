@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/kubemq-io/kubemq-community/pkg/pipe"
 	"github.com/nats-io/nuid"
+	"github.com/tengla/skuta/pkg/pipe"
 )
 
 // set Global max size for messagego
