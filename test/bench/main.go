@@ -4,10 +4,15 @@
 //	kubemq server
 //	go run ./test/bench -addr localhost:50000 -label new -pid $(pgrep -x kubemq) -out new.json
 //	go run ./test/bench compare old.json new.json
+//
+// For a server with TLS, set KUBEMQ_TLS_CA, and for mTLS also KUBEMQ_TLS_CERT
+// and KUBEMQ_TLS_KEY (see transportCredentials).
 package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"os"
@@ -17,6 +22,7 @@ import (
 
 	pb "github.com/kubemq-io/protobuf/go"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
@@ -89,8 +95,12 @@ func main() {
 		return
 	}
 
+	transport, err := transportCredentials()
+	if err != nil {
+		fatal(err.Error())
+	}
 	conn, err := grpc.NewClient(*addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithTransportCredentials(transport),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxCallSize), grpc.MaxCallSendMsgSize(maxCallSize)))
 	if err != nil {
 		fatal(err.Error())
@@ -153,4 +163,38 @@ func runOnce(e *env, s scenario) Sample {
 func fatal(message string) {
 	fmt.Fprintln(os.Stderr, strings.TrimSpace(message))
 	os.Exit(1)
+}
+
+// transportCredentials uses TLS when KUBEMQ_TLS_CA, KUBEMQ_TLS_CERT or
+// KUBEMQ_TLS_KEY is set: the CA file to trust (empty: the system's CAs), and
+// the client certificate and key a server in mTLS mode requires. They are
+// environment variables rather than flags so that `compare` stays the first
+// argument when a task passes them.
+func transportCredentials() (credentials.TransportCredentials, error) {
+	ca, cert, key := os.Getenv("KUBEMQ_TLS_CA"), os.Getenv("KUBEMQ_TLS_CERT"), os.Getenv("KUBEMQ_TLS_KEY")
+	if ca == "" && cert == "" && key == "" {
+		return insecure.NewCredentials(), nil
+	}
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12}
+	if ca != "" {
+		pem, err := os.ReadFile(ca)
+		if err != nil {
+			return nil, err
+		}
+		cfg.RootCAs = x509.NewCertPool()
+		if !cfg.RootCAs.AppendCertsFromPEM(pem) {
+			return nil, fmt.Errorf("KUBEMQ_TLS_CA: no PEM certificates in %s", ca)
+		}
+	}
+	if (cert == "") != (key == "") {
+		return nil, fmt.Errorf("set KUBEMQ_TLS_CERT and KUBEMQ_TLS_KEY together")
+	}
+	if cert != "" {
+		pair, err := tls.LoadX509KeyPair(cert, key)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Certificates = []tls.Certificate{pair}
+	}
+	return credentials.NewTLS(cfg), nil
 }

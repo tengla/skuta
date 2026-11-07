@@ -199,6 +199,8 @@ security:
 
 or `SECURITY_CERT_FILENAME`, `SECURITY_KEY_FILENAME` and `SECURITY_CA_FILENAME`. Port 8080 (dashboard, API, MCP) stays plain HTTP; put a proxy that terminates TLS in front of it.
 
+To try it locally, `task certs` creates a CA plus a server certificate for `localhost` and a client certificate signed by it, in `certs/` (ignored by git). Add more server names with `CERTS_HOSTS="DNS:broker.local,IP:192.168.1.10"`.
+
 The `kubemq` CLI connects with TLS when `client.tls` is enabled:
 
 ```yaml
@@ -295,11 +297,12 @@ npm --prefix web ci && npm --prefix web run dev      # dashboard dev server with
 go test ./...                                        # tests (the integration tests take several minutes)
 task smoke -- localhost:50000                        # kubemq-js SDK smoke test against a running server
 task bench -- -addr localhost:50000 -out new.json    # benchmarks against a running server
+task certs                                           # a local CA, server and client certificate in certs/, for TLS
 ```
 
 The dashboard dev server proxies API calls to a broker on `http://localhost:8080`. Set `BROKER_URL` to use another one. Run `task web` and commit `assets/` after changing the dashboard, since `go build` embeds whatever is there.
 
-`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `KUBEMQ_TOKEN` when authentication is on. It writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
+`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `KUBEMQ_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `KUBEMQ_TLS_CA`, `KUBEMQ_TLS_CERT` and `KUBEMQ_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
 
 `task bench` runs [`test/bench`](test/bench/main.go), which measures every messaging pattern over gRPC against a server you started, so it works with any build. Each scenario runs three times and prints medians, and anything sent but never received is reported as lost. It writes to fresh `bench.<id>.*` channels and deletes them after each run. It stores up to 1 GiB per scenario (`-budget`), so give it a server you don't mind loading.
 

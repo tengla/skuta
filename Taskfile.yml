@@ -9,6 +9,9 @@ vars:
   # `task release VERSION=v2.5.0`, which creates the tag.
   VERSION:
     sh: git describe --tags --always --dirty
+  # "true" when task certs has created certs/; smoke and bench then use mTLS.
+  LOCAL_CERTS:
+    sh: test -f certs/ca.pem -a -f certs/client.pem -a -f certs/client-key.pem && echo true || echo false
 
 tasks:
   check_update:
@@ -37,13 +40,53 @@ tasks:
       - task: build
   # Runs test/smoke-js against a running server: task smoke -- [host:port]
   # (default localhost:50000). Set KUBEMQ_TOKEN when authentication is on.
+  # When certs/ (from task certs) exists it connects with mTLS using those
+  # certificates; TLS=false connects without TLS.
   smoke:
     dir: test/smoke-js
+    vars:
+      TLS: '{{.TLS | default .LOCAL_CERTS}}'
+    env: &tls_env
+      KUBEMQ_TLS_CA: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/ca.pem{{end}}'
+      KUBEMQ_TLS_CERT: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client.pem{{end}}'
+      KUBEMQ_TLS_KEY: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client-key.pem{{end}}'
     cmds:
       - npm ci
       - node smoke.mjs {{.CLI_ARGS}}
+  # Creates a local CA plus a server and a client certificate signed by it, for
+  # trying TLS and mTLS (see "TLS" in README.md). The server certificate is
+  # valid for localhost and 127.0.0.1; add names with
+  # CERTS_HOSTS="DNS:broker.local,IP:192.168.1.10". Skips if the files exist,
+  # so delete the directory to make new ones.
+  certs:
+    desc: Create a local CA, server and client certificate in certs/
+    vars:
+      CERTS_DIR: '{{.CERTS_DIR | default "certs"}}'
+      CERTS_DAYS: '{{.CERTS_DAYS | default "365"}}'
+      SAN: 'DNS:localhost,IP:127.0.0.1{{if .CERTS_HOSTS}},{{.CERTS_HOSTS}}{{end}}'
+    dir: '{{.CERTS_DIR}}'
+    status:
+      - test -f ca.pem -a -f server.pem -a -f server-key.pem -a -f client.pem -a -f client-key.pem
+    cmds:
+      - >-
+        openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days {{.CERTS_DAYS}}
+        -keyout ca-key.pem -out ca.pem -subj "/CN=skuta-local-ca"
+        -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign"
+      - openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -keyout server-key.pem -out server.csr -subj "/CN=localhost"
+      - printf 'subjectAltName={{.SAN}}\nextendedKeyUsage=serverAuth\n' > server.ext
+      - openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days {{.CERTS_DAYS}} -out server.pem -extfile server.ext
+      - openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -keyout client-key.pem -out client.csr -subj "/CN=local-client"
+      - printf 'extendedKeyUsage=clientAuth\n' > client.ext
+      - openssl x509 -req -in client.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days {{.CERTS_DAYS}} -out client.pem -extfile client.ext
+      - rm -f server.csr server.ext client.csr client.ext ca.srl
+      - openssl verify -CAfile ca.pem server.pem client.pem
+      - 'echo "Created in {{.CERTS_DIR}}/: ca.pem, server.pem, server-key.pem, client.pem, client-key.pem (ca-key.pem signs more)."'
   # Runs test/bench against a running server: task bench -- -addr localhost:50000
+  # Uses certs/ for mTLS like smoke; TLS=false connects without TLS.
   bench:
+    vars:
+      TLS: '{{.TLS | default .LOCAL_CERTS}}'
+    env: *tls_env
     cmds:
       - go run ./test/bench {{.CLI_ARGS}}
   goreleaser:

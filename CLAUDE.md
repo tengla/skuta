@@ -15,8 +15,9 @@ task lint                                                 # golangci-lint run --
 task docker                                               # build image kubemq/kubemq-community:<VERSION>
 task web                                                  # build the dashboard (web/) into assets/
 npm --prefix web run dev                                  # dashboard dev server; proxies /api (incl. websockets) to BROKER_URL, default http://localhost:8080
-task smoke -- localhost:50000                             # kubemq-js SDK smoke test (test/smoke-js) against a running server; KUBEMQ_TOKEN if auth is on
+task smoke -- localhost:50000                             # kubemq-js SDK smoke test (test/smoke-js) against a running server; KUBEMQ_TOKEN if auth is on; smoke and bench use mTLS with certs/ when it exists (KUBEMQ_TLS_CA/CERT/KEY), TLS=false to skip
 task bench -- -addr localhost:50000 -out new.json         # benchmarks (test/bench) against a running server; `go run ./test/bench compare old.json new.json` compares two runs
+task certs                                                # local CA + server/client certs in certs/ (gitignored) for TLS/mTLS; CERTS_HOSTS adds server names
 ```
 
 `Taskfile.yml` (go-task) holds the release flow (`task release VERSION=vX.Y.Z` = git tag + multi-arch buildx push + goreleaser). The version is the git tag: Taskfile's `VERSION` comes from `git describe --tags --always --dirty` and is injected into `main.version` with ldflags. Don't write version numbers into files. A build without ldflags reports `devel-<commit>` (`buildVersion` in `main.go`). The default `task` target builds `kubemq.exe` (Windows-oriented).

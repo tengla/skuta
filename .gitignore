@@ -274,3 +274,6 @@ test_single_*/
 
 # Binary built by `task build`
 /kubemq
+
+# Local TLS certificates and keys from `task certs`
+/certs/

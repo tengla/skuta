@@ -2,12 +2,15 @@
 //
 //   node smoke.mjs [host:port]        (default: $KUBEMQ_ADDRESS or localhost:50000)
 //
-// Set KUBEMQ_TOKEN when the server has authentication enabled. Each run uses
-// fresh channels named smoke.<run id>.* on the target server.
+// Set KUBEMQ_TOKEN when the server has authentication enabled. For a server
+// with TLS, set KUBEMQ_TLS_CA to the CA file, and for mTLS also KUBEMQ_TLS_CERT
+// and KUBEMQ_TLS_KEY to the client certificate and key. Each run uses fresh
+// channels named smoke.<run id>.* on the target server.
 //
 // A check can be marked expectFail for SDK features the server doesn't
 // support. Those are reported as XFAIL and don't fail the run; if one starts
 // passing it shows up as XPASS.
+import { readFileSync } from 'node:fs'
 import {
   KubeMQClient,
   createEventMessage,
@@ -63,7 +66,14 @@ const subscriptionError = (kind) => (err) => {
   if (!/cancelled on client/i.test(err?.message ?? '')) console.error(`${kind} subscription error:`, err?.message ?? err)
 }
 
-const client = await KubeMQClient.create({ address, clientId: `smoke-${run}`, credentials: process.env.KUBEMQ_TOKEN || undefined })
+// TLS from KUBEMQ_TLS_* file paths. Left out when none is set, which keeps
+// kubemq-js's default: plaintext for localhost.
+const tlsFile = (name) => (process.env[name] ? readFileSync(process.env[name]) : undefined)
+const tls = ['KUBEMQ_TLS_CA', 'KUBEMQ_TLS_CERT', 'KUBEMQ_TLS_KEY'].some((name) => process.env[name])
+  ? { enabled: true, caCert: tlsFile('KUBEMQ_TLS_CA'), clientCert: tlsFile('KUBEMQ_TLS_CERT'), clientKey: tlsFile('KUBEMQ_TLS_KEY') }
+  : undefined
+
+const client = await KubeMQClient.create({ address, clientId: `smoke-${run}`, credentials: process.env.KUBEMQ_TOKEN || undefined, tls })
 
 await check('ping', async () => {
   const info = await client.ping()
