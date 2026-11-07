@@ -2,13 +2,18 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/spf13/cobra"
-	"github.com/tengla/skuta/config"
-	"github.com/tengla/skuta/pkg/utils"
 	"strconv"
 	"strings"
+
+	"github.com/AlecAivazis/survey/v2"
+	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
+	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/utils"
+	"github.com/tengla/skuta/pkg/uuid"
 )
 
 type StreamOptions struct {
@@ -65,8 +70,11 @@ func (o *StreamOptions) Validate() error {
 	return nil
 }
 
+// errAbort ends the stream command without an error.
+var errAbort = errors.New("aborted")
+
 func (o *StreamOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -76,67 +84,114 @@ func (o *StreamOptions) Run(ctx context.Context) error {
 	}()
 
 	for {
-		stream := client.NewStreamQueueMessage().SetChannel(o.channel)
 		utils.Printlnf("waiting for the message in the queue: (waiting for %d seconds, visibility set to %d seconds)", o.wait, o.visibility)
-		msg, err := stream.Next(ctx, int32(o.visibility), int32(o.wait))
+		err := o.transaction(ctx, client)
+		if errors.Is(err, errAbort) {
+			return nil
+		}
 		if err != nil {
 			return err
 		}
-		utils.Printlnf("[channel: %s] [client id: %s] -> {id: %s, metadata: %s, body: %s}", msg.Channel, msg.ClientID, msg.MessageID, msg.Metadata, msg.Body)
-	PROMPT:
+	}
+}
+
+// transaction receives one message on its own stream and applies the
+// actions the user picks until one of them settles it. Ending the stream
+// before that returns the message to the queue.
+func (o *StreamOptions) transaction(ctx context.Context, client *grpcclient.Client) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stream, err := client.StreamQueueMessage(ctx)
+	if err != nil {
+		return err
+	}
+	requestID := uuid.New()
+	request := func(req *pb.StreamQueueMessagesRequest) (*pb.StreamQueueMessagesResponse, error) {
+		req.RequestID = requestID
+		req.ClientID = client.ClientID()
+		if err := stream.Send(req); err != nil {
+			return nil, err
+		}
+		res, err := stream.Recv()
+		if err != nil {
+			return nil, err
+		}
+		if res.IsError {
+			return nil, errors.New(res.Error)
+		}
+		return res, nil
+	}
+
+	res, err := request(&pb.StreamQueueMessagesRequest{
+		StreamRequestTypeData: pb.StreamRequestType_ReceiveMessage,
+		Channel:               o.channel,
+		VisibilitySeconds:     int32(o.visibility),
+		WaitTimeSeconds:       int32(o.wait),
+	})
+	if err != nil {
+		return err
+	}
+	msg := res.Message
+	if msg == nil {
+		return errors.New("no new queue message available")
+	}
+	utils.Printlnf("[channel: %s] [client id: %s] -> {id: %s, metadata: %s, body: %s}", msg.Channel, msg.ClientID, msg.MessageID, msg.Metadata, msg.Body)
+	var sequence uint64
+	if msg.Attributes != nil {
+		sequence = msg.Attributes.Sequence
+	}
+
+	for {
 		action, result, err := o.prompt()
 		if err != nil {
 			return err
 		}
 		switch action {
 		case "Ack":
-			err := msg.Ack()
-			if err != nil {
+			if _, err := request(&pb.StreamQueueMessagesRequest{StreamRequestTypeData: pb.StreamRequestType_AckMessage, Channel: o.channel, RefSequence: sequence}); err != nil {
 				return err
 			}
 			utils.Println("Message Acked")
+			return nil
 		case "Reject":
-			err := msg.Reject()
-			if err != nil {
+			if _, err := request(&pb.StreamQueueMessagesRequest{StreamRequestTypeData: pb.StreamRequestType_RejectMessage, Channel: o.channel, RefSequence: sequence}); err != nil {
 				return err
 			}
 			utils.Println("Message Rejected")
+			return nil
 		case "Extend visibility":
 			val, err := strconv.Atoi(result)
 			if err != nil {
 				return err
 			}
-			err = msg.ExtendVisibility(int32(val))
-			if err != nil {
+			if _, err := request(&pb.StreamQueueMessagesRequest{StreamRequestTypeData: pb.StreamRequestType_ModifyVisibility, Channel: o.channel, VisibilitySeconds: int32(val)}); err != nil {
 				return err
 			}
 			utils.Printlnf("Visibility Extended By %s Seconds.", result)
-			goto PROMPT
 		case "Resend to another queue":
-			err = msg.Resend(result)
-			if err != nil {
+			if _, err := request(&pb.StreamQueueMessagesRequest{StreamRequestTypeData: pb.StreamRequestType_ResendMessage, Channel: result}); err != nil {
 				return err
 			}
 			utils.Printlnf("Message Resent to %s.", result)
+			return nil
 		case "Ack and send new message":
 			pair := strings.Split(result, ",")
 			if len(pair) != 2 {
 				return fmt.Errorf("invalid queue-name,message-body format")
 			}
-			newMessage := client.QM().SetChannel(pair[0]).SetBody([]byte(pair[1]))
-			err := stream.ResendWithNewMessage(newMessage)
-			if err != nil {
+			newMessage := &pb.QueueMessage{ClientID: client.ClientID(), Channel: pair[0], Body: []byte(pair[1])}
+			if _, err := request(&pb.StreamQueueMessagesRequest{StreamRequestTypeData: pb.StreamRequestType_SendModifiedMessage, ModifiedMessage: newMessage}); err != nil {
 				return err
 			}
 			utils.Println("New Message Sent.")
+			return nil
 		case "Abort":
 			utils.Println("Aborting.")
-			return nil
+			return errAbort
 		}
-
 	}
-
 }
+
 func (o *StreamOptions) prompt() (string, string, error) {
 	action := ""
 	prompt := &survey.Select{

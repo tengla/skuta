@@ -3,7 +3,10 @@ package queue
 import (
 	"context"
 	"fmt"
+
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/utils"
 )
@@ -91,7 +94,7 @@ func (o *SendOptions) Validate() error {
 }
 
 func (o *SendOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -101,17 +104,21 @@ func (o *SendOptions) Run(ctx context.Context) error {
 	}()
 
 	for i := 0; i < o.messages; i++ {
-		msg := client.QM().
-			SetChannel(o.channel).
-			SetBody([]byte(o.body)).
-			SetMetadata(o.metadata).
-			SetPolicyExpirationSeconds(o.expiration).
-			SetPolicyDelaySeconds(o.delay).
-			SetPolicyMaxReceiveCount(o.maxReceive).
-			SetPolicyMaxReceiveQueue(o.deadLetter)
+		msg := &pb.QueueMessage{
+			ClientID: client.ClientID(),
+			Channel:  o.channel,
+			Metadata: o.metadata,
+			Body:     []byte(o.body),
+			Policy: &pb.QueueMessagePolicy{
+				ExpirationSeconds: int32(o.expiration),
+				DelaySeconds:      int32(o.delay),
+				MaxReceiveCount:   int32(o.maxReceive),
+				MaxReceiveQueue:   o.deadLetter,
+			},
+		}
 		utils.Println("Sending Queue Message:")
 		printQueueMessage(msg)
-		res, err := msg.Send(ctx)
+		res, err := client.SendQueueMessage(ctx, msg)
 		if err != nil {
 			return fmt.Errorf("error sending queue message, %s", err.Error())
 		}

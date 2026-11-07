@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -23,7 +24,8 @@ type ReceiveOptions struct {
 	startSequence int
 	startTime     string
 	startDuration string
-	subOptions    kubemq.SubscriptionOption
+	startType     pb.Subscribe_EventsStoreType
+	startValue    int64
 }
 
 var eventsReceiveExamples = `
@@ -75,19 +77,19 @@ func (o *ReceiveOptions) Complete(args []string) error {
 	}
 
 	if o.startNew {
-		o.subOptions = kubemq.StartFromNewEvents()
+		o.startType = pb.Subscribe_StartNewOnly
 		return nil
 	}
 	if o.startFirst {
-		o.subOptions = kubemq.StartFromFirstEvent()
+		o.startType = pb.Subscribe_StartFromFirst
 		return nil
 	}
 	if o.startLast {
-		o.subOptions = kubemq.StartFromLastEvent()
+		o.startType = pb.Subscribe_StartFromLast
 		return nil
 	}
 	if o.startSequence > 0 {
-		o.subOptions = kubemq.StartFromSequence(o.startSequence)
+		o.startType, o.startValue = pb.Subscribe_StartAtSequence, int64(o.startSequence)
 		return nil
 	}
 	if o.startTime != "" {
@@ -95,7 +97,7 @@ func (o *ReceiveOptions) Complete(args []string) error {
 		if err != nil {
 			return fmt.Errorf("start time format error, %s", err.Error())
 		}
-		o.subOptions = kubemq.StartFromTime(t.UTC())
+		o.startType, o.startValue = pb.Subscribe_StartAtTime, t.UTC().UnixNano()
 		return nil
 	}
 	if o.startDuration != "" {
@@ -103,7 +105,7 @@ func (o *ReceiveOptions) Complete(args []string) error {
 		if err != nil {
 			return fmt.Errorf("start duration format error, %s", err.Error())
 		}
-		o.subOptions = kubemq.StartFromTimeDelta(d)
+		o.startType, o.startValue = pb.Subscribe_StartAtTimeDelta, int64(d.Seconds())
 		return nil
 	}
 	err := o.promptOptions()
@@ -118,7 +120,7 @@ func (o *ReceiveOptions) Validate() error {
 }
 
 func (o *ReceiveOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -127,29 +129,29 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 		_ = client.Close()
 	}()
 
-	errChan := make(chan error, 1)
-	eventsChan, err := client.SubscribeToEventsStore(ctx, o.channel, o.group, errChan, o.subOptions)
-
-	if err != nil {
-		utils.Println(fmt.Errorf("receive 'events store' messages, %s", err.Error()).Error())
+	sub := &pb.Subscribe{
+		SubscribeTypeData:    pb.Subscribe_EventsStore,
+		ClientID:             client.ClientID(),
+		Channel:              o.channel,
+		Group:                o.group,
+		EventsStoreTypeData:  o.startType,
+		EventsStoreTypeValue: o.startValue,
 	}
 	utils.Println("waiting for 'events store' messages...")
-
-	for {
-		select {
-		case ev, opened := <-eventsChan:
-			if !opened {
-				utils.Println("server disconnected")
-				return nil
-			}
-			printEventReceive(ev)
-		case err := <-errChan:
-			return fmt.Errorf("server disconnected with error: %s", err.Error())
-		case <-ctx.Done():
-			return nil
-		}
+	err = grpcclient.Receive(ctx, client, func(ctx context.Context) (grpcclient.Stream[*pb.EventReceive], error) {
+		return client.SubscribeToEvents(ctx, sub)
+	}, func(ev *pb.EventReceive) error {
+		printEventReceive(ev)
+		// After a reconnect, continue after the last message shown instead
+		// of starting over from the original start option.
+		sub.EventsStoreTypeData = pb.Subscribe_StartAtSequence
+		sub.EventsStoreTypeValue = int64(ev.Sequence) + 1
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("receive 'events store' messages, %s", err.Error())
 	}
-
+	return nil
 }
 
 func (o *ReceiveOptions) promptOptions() error {
@@ -164,13 +166,13 @@ func (o *ReceiveOptions) promptOptions() error {
 	}
 	switch action {
 	case "start from new messages only":
-		o.subOptions = kubemq.StartFromNewEvents()
+		o.startType = pb.Subscribe_StartNewOnly
 		return nil
 	case "start from first body":
-		o.subOptions = kubemq.StartFromFirstEvent()
+		o.startType = pb.Subscribe_StartFromFirst
 		return nil
 	case "start from last body":
-		o.subOptions = kubemq.StartFromLastEvent()
+		o.startType = pb.Subscribe_StartFromLast
 		return nil
 	case "start from sequence":
 		seqStr := ""
@@ -190,7 +192,7 @@ func (o *ReceiveOptions) promptOptions() error {
 		if err != nil {
 			return err
 		}
-		o.subOptions = kubemq.StartFromSequence(seq)
+		o.startType, o.startValue = pb.Subscribe_StartAtSequence, int64(seq)
 		return nil
 	case "start from time":
 		timeStr := ""
@@ -210,7 +212,7 @@ func (o *ReceiveOptions) promptOptions() error {
 		if err != nil {
 			return err
 		}
-		o.subOptions = kubemq.StartFromTime(t.UTC())
+		o.startType, o.startValue = pb.Subscribe_StartAtTime, t.UTC().UnixNano()
 		return nil
 	case "start from duration":
 		durationStr := ""
@@ -230,7 +232,7 @@ func (o *ReceiveOptions) promptOptions() error {
 		if err != nil {
 			return err
 		}
-		o.subOptions = kubemq.StartFromTimeDelta(d)
+		o.startType, o.startValue = pb.Subscribe_StartAtTimeDelta, int64(d.Seconds())
 		return nil
 	}
 	return fmt.Errorf("invalid input")

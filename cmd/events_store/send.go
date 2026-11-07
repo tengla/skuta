@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
@@ -78,7 +80,7 @@ func (o *SendOptions) Validate() error {
 }
 
 func (o *SendOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -89,17 +91,20 @@ func (o *SendOptions) Run(ctx context.Context) error {
 
 	fmt.Println("Sending Events Store:")
 	for i := 1; i <= o.messages; i++ {
-		msg := client.ES().
-			SetChannel(o.channel).
-			SetId(uuid.New()).
-			SetBody([]byte(o.body)).
-			SetMetadata(o.metadata)
-		eventStoreResult, err := msg.Send(ctx)
+		msg := &pb.Event{
+			EventID:  uuid.New(),
+			ClientID: client.ClientID(),
+			Channel:  o.channel,
+			Metadata: o.metadata,
+			Body:     []byte(o.body),
+			Store:    true,
+		}
+		result, err := client.SendEvent(ctx, msg)
 		if err != nil {
 			return fmt.Errorf("sending 'events store' body, %s", err.Error())
 		}
-		if eventStoreResult.Err != nil {
-			return fmt.Errorf("sending 'events store' body, %s", eventStoreResult.Err.Error())
+		if !result.Sent {
+			return fmt.Errorf("sending 'events store' body, %s", result.Error)
 		}
 		printEventStore(msg)
 	}

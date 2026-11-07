@@ -4,8 +4,9 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	kubemq "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
 	"strconv"
+	"time"
 )
 
 type object struct {
@@ -22,11 +23,11 @@ type object struct {
 	BodyString string            `json:"body_string,omitempty"`
 }
 
-func newObjectWithCommandReceive(cmd *kubemq.CommandReceive) *object {
+func newObjectWithCommandReceive(cmd *pb.Request) *object {
 	obj := &object{
-		Id:         cmd.Id,
+		Id:         cmd.RequestID,
 		Channel:    cmd.Channel,
-		ClientId:   cmd.ClientId,
+		ClientId:   cmd.ClientID,
 		Metadata:   cmd.Metadata,
 		Tags:       cmd.Tags,
 		BodyJson:   json.RawMessage{},
@@ -50,16 +51,16 @@ func newObjectWithCommandReceive(cmd *kubemq.CommandReceive) *object {
 	}
 	return obj
 }
-func newObjectWithCommandResponse(response *kubemq.CommandResponse) *object {
+func newObjectWithCommandResponse(response *pb.Response) *object {
 	obj := &object{
-		Id:         response.CommandId,
+		Id:         response.RequestID,
 		Channel:    "",
-		ClientId:   response.ResponseClientId,
+		ClientId:   response.ClientID,
 		Metadata:   "",
 		Tags:       response.Tags,
 		Executed:   strconv.FormatBool(response.Executed),
 		Timeout:    "",
-		ExecutedAt: response.ExecutedAt.Format("2006-01-02 15:04:05.999"),
+		ExecutedAt: time.Unix(response.Timestamp, 0).Format("2006-01-02 15:04:05.999"),
 		Error:      response.Error,
 		BodyJson:   nil,
 		BodyString: "",
@@ -69,12 +70,12 @@ func newObjectWithCommandResponse(response *kubemq.CommandResponse) *object {
 	}
 	return obj
 }
-func newObjectWithCommand(cmd *kubemq.Command) *object {
+func newObjectWithCommand(cmd *pb.Request) *object {
 
 	obj := &object{
-		Id:         cmd.Id,
+		Id:         cmd.RequestID,
 		Channel:    cmd.Channel,
-		ClientId:   cmd.ClientId,
+		ClientId:   cmd.ClientID,
 		Metadata:   cmd.Metadata,
 		Tags:       cmd.Tags,
 		BodyJson:   json.RawMessage{},
@@ -82,7 +83,7 @@ func newObjectWithCommand(cmd *kubemq.Command) *object {
 		Executed:   "",
 		ExecutedAt: "",
 		Error:      "",
-		Timeout:    cmd.Timeout.String(),
+		Timeout:    (time.Duration(cmd.Timeout) * time.Millisecond).String(),
 	}
 	var js json.RawMessage
 	if err := json.Unmarshal(cmd.Body, &js); err == nil {
@@ -104,13 +105,13 @@ func (o *object) String() string {
 	return string(data)
 }
 
-func printCommandReceive(command *kubemq.CommandReceive) {
+func printCommandReceive(command *pb.Request) {
 	fmt.Println(newObjectWithCommandReceive(command))
 }
 
-func printCommandResponse(response *kubemq.CommandResponse) {
+func printCommandResponse(response *pb.Response) {
 	fmt.Println(newObjectWithCommandResponse(response))
 }
-func printCommand(cmd *kubemq.Command) {
+func printCommand(cmd *pb.Request) {
 	fmt.Println(newObjectWithCommand(cmd))
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kubemq "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
 	"time"
 )
 
@@ -25,7 +25,7 @@ type queueMessageObject struct {
 	BodyString                string            `json:"body_string,omitempty"`
 }
 
-func newQueueMessageObject(msg *kubemq.QueueMessage) *queueMessageObject {
+func newQueueMessageObject(msg *pb.QueueMessage) *queueMessageObject {
 	obj := &queueMessageObject{
 		Id:         msg.MessageID,
 		Channel:    msg.Channel,
@@ -79,12 +79,12 @@ func (o *queueMessageObject) String() string {
 	return string(data)
 }
 
-func printItems(items []*kubemq.QueueMessage) {
+func printItems(items []*pb.QueueMessage) {
 	for _, item := range items {
 		fmt.Println(newQueueMessageObject(item))
 	}
 }
-func printQueueMessage(msg *kubemq.QueueMessage) {
+func printQueueMessage(msg *pb.QueueMessage) {
 	fmt.Println(newQueueMessageObject(msg))
 }
 
@@ -97,7 +97,7 @@ type resultObj struct {
 	Error        string `json:"error,omitempty"`
 }
 
-func printQueueMessageResult(res *kubemq.SendQueueMessageResult) {
+func printQueueMessageResult(res *pb.SendQueueMessageResult) {
 	obj := &resultObj{
 		MessageID: res.MessageID,
 		SentAt:    time.Unix(0, res.SentAt).Format("2006-01-02 15:04:05.999"),

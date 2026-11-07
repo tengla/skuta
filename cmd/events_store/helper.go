@@ -4,7 +4,8 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	kubemq "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
+	"time"
 )
 
 type object struct {
@@ -19,13 +20,12 @@ type object struct {
 	BodyString string            `json:"body_string,omitempty"`
 }
 
-func newObjectWithEventReceive(event *kubemq.EventStoreReceive) *object {
+func newObjectWithEventReceive(event *pb.EventReceive) *object {
 	obj := &object{
-		Id:         event.Id,
+		Id:         event.EventID,
 		Channel:    event.Channel,
-		ClientId:   event.ClientId,
 		Metadata:   event.Metadata,
-		Timestamp:  event.Timestamp.Format("2006-01-02 15:04:05.999"),
+		Timestamp:  time.Unix(0, event.Timestamp).Format("2006-01-02 15:04:05.999"),
 		Sequence:   event.Sequence,
 		Tags:       event.Tags,
 		BodyJson:   json.RawMessage{},
@@ -44,11 +44,11 @@ func newObjectWithEventReceive(event *kubemq.EventStoreReceive) *object {
 	}
 	return obj
 }
-func newObjectWithEventStore(event *kubemq.EventStore) *object {
+func newObjectWithEventStore(event *pb.Event) *object {
 	obj := &object{
-		Id:         event.Id,
+		Id:         event.EventID,
 		Channel:    event.Channel,
-		ClientId:   event.ClientId,
+		ClientId:   event.ClientID,
 		Metadata:   event.Metadata,
 		Tags:       event.Tags,
 		BodyJson:   json.RawMessage{},
@@ -74,9 +74,9 @@ func (o *object) String() string {
 	return string(data)
 }
 
-func printEventReceive(event *kubemq.EventStoreReceive) {
+func printEventReceive(event *pb.EventReceive) {
 	fmt.Println(newObjectWithEventReceive(event))
 }
-func printEventStore(event *kubemq.EventStore) {
+func printEventStore(event *pb.Event) {
 	fmt.Println(newObjectWithEventStore(event))
 }

@@ -3,7 +3,9 @@ package events
 import (
 	"context"
 	"fmt"
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/utils"
 )
@@ -63,7 +65,7 @@ func (o *ReceiveOptions) Validate() error {
 }
 
 func (o *ReceiveOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -72,26 +74,21 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 		_ = client.Close()
 	}()
 
-	errChan := make(chan error, 1)
-	eventsChan, err := client.SubscribeToEvents(ctx, o.channel, o.group, errChan)
-
-	if err != nil {
-		utils.Println(fmt.Errorf("receive 'events' messages, %s", err.Error()).Error())
+	sub := &pb.Subscribe{
+		SubscribeTypeData: pb.Subscribe_Events,
+		ClientID:          client.ClientID(),
+		Channel:           o.channel,
+		Group:             o.group,
 	}
 	utils.Println("waiting for 'events' messages...")
-	for {
-		select {
-		case ev, opened := <-eventsChan:
-			if !opened {
-				utils.Println("server disconnected")
-				return nil
-			}
-			printEvent(ev)
-		case err := <-errChan:
-			return fmt.Errorf("server disconnected with error: %s", err.Error())
-		case <-ctx.Done():
-			return nil
-		}
+	err = grpcclient.Receive(ctx, client, func(ctx context.Context) (grpcclient.Stream[*pb.EventReceive], error) {
+		return client.SubscribeToEvents(ctx, sub)
+	}, func(ev *pb.EventReceive) error {
+		printEventReceive(ev)
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("receive 'events' messages, %s", err.Error())
 	}
-
+	return nil
 }

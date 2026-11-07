@@ -4,7 +4,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	kubemq "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
 )
 
 type object struct {
@@ -17,23 +17,23 @@ type object struct {
 	BodyString string            `json:"body_string,omitempty"`
 }
 
-func newObjectWithEvent(event *kubemq.Event) *object {
+func newObject(id, channel, clientID, metadata string, tags map[string]string, body []byte) *object {
 	obj := &object{
-		Id:         event.Id,
-		Channel:    event.Channel,
-		ClientId:   event.ClientId,
-		Metadata:   event.Metadata,
-		Tags:       event.Tags,
+		Id:         id,
+		Channel:    channel,
+		ClientId:   clientID,
+		Metadata:   metadata,
+		Tags:       tags,
 		BodyJson:   json.RawMessage{},
 		BodyString: "",
 	}
 	var js json.RawMessage
-	if err := json.Unmarshal(event.Body, &js); err == nil {
+	if err := json.Unmarshal(body, &js); err == nil {
 		obj.BodyJson = js
 	} else {
-		sDec, err := b64.StdEncoding.DecodeString(string(event.Body))
+		sDec, err := b64.StdEncoding.DecodeString(string(body))
 		if err != nil {
-			obj.BodyString = string(event.Body)
+			obj.BodyString = string(body)
 		} else {
 			obj.BodyString = string(sDec)
 		}
@@ -46,6 +46,11 @@ func (o *object) String() string {
 	return string(data)
 }
 
-func printEvent(event *kubemq.Event) {
-	fmt.Println(newObjectWithEvent(event))
+func printEvent(event *pb.Event) {
+	fmt.Println(newObject(event.EventID, event.Channel, event.ClientID, event.Metadata, event.Tags, event.Body))
+}
+
+// printEventReceive prints a received event, which doesn't name its sender.
+func printEventReceive(event *pb.EventReceive) {
+	fmt.Println(newObject(event.EventID, event.Channel, "", event.Metadata, event.Tags, event.Body))
 }

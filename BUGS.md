@@ -36,14 +36,8 @@ After oversized events of 64 to 70 MiB in one client session, later subscribes f
 
 The same 31 MiB send worked on a fresh client and server, so this needs its own reproduction. It isn't clear whether the client or the server is at fault.
 
-## TLS gaps in the `security` section
+## Known limitation: port 8080 has no TLS
 
-Found 2026-11-07 by reading the code. Nothing here has been reproduced against a running server.
+The `security` section applies to gRPC and REST only. The dashboard, `/api` and `/mcp` on `Api.Port` are plain HTTP by design: requiring client certificates there would lock out browsers, Kubernetes probes and most MCP clients. Bearer tokens and the dashboard's session cookie are only protected by whatever carries the traffic.
 
-### The API port has no TLS
-
-`security` applies to gRPC and REST only. The dashboard, `/api` and `/mcp` on `Api.Port` stay plain HTTP. Without a TLS-terminating proxy, Bearer tokens and the dashboard's session cookie cross the network unencrypted. The cookie is only marked `Secure` when the request came over HTTPS.
-
-### The CLI can't connect to a TLS server
-
-The `client` section has no TLS settings, and `GetKubeMQClient` in `pkg/utils/client.go` never gives the SDK a certificate. Once `security` is set, `kubemq events|events_store|commands|queries|queue` can no longer connect to that server.
+Reach the dashboard with `kubectl port-forward`, which tunnels through the Kubernetes API server, or put a proxy that terminates TLS in front of it. Don't expose port 8080 directly.

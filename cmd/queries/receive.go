@@ -3,12 +3,13 @@ package queries
 import (
 	"context"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/tengla/skuta/pkg/utils"
 
+	"github.com/AlecAivazis/survey/v2"
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
-	"time"
+	"github.com/tengla/skuta/pkg/utils"
 )
 
 type ReceiveOptions struct {
@@ -66,7 +67,7 @@ func (o *ReceiveOptions) Validate() error {
 }
 
 func (o *ReceiveOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -75,69 +76,58 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 		_ = client.Close()
 	}()
 
-	errChan := make(chan error, 1)
-	queriesChan, err := client.SubscribeToQueries(ctx, o.channel, o.group, errChan)
-
-	if err != nil {
-		utils.Println(fmt.Errorf("receive 'queries' messages, %s", err.Error()).Error())
+	sub := &pb.Subscribe{
+		SubscribeTypeData: pb.Subscribe_Queries,
+		ClientID:          client.ClientID(),
+		Channel:           o.channel,
+		Group:             o.group,
 	}
-	for {
-		utils.Println("waiting for the next query body...")
-		select {
-		case err := <-errChan:
-			return fmt.Errorf("server disconnected with error: %s", err.Error())
-
-		case query, opened := <-queriesChan:
-			if !opened {
-				utils.Println("server disconnected")
-				return nil
-			}
-			printQueryReceive(query)
-			if o.autoResponse {
-				err = client.R().SetRequestId(query.Id).SetExecutedAt(time.Now()).SetResponseTo(query.ResponseTo).SetBody([]byte("executed your query")).Send(ctx)
-				if err != nil {
-					return err
-				}
-				utils.Println("auto execution sent executed response ")
-				continue
-			}
-			var isExecuted bool
-			prompt := &survey.Confirm{
-				Renderer: survey.Renderer{},
-				Message:  "Set executed ?",
-				Help:     "",
-			}
-			err := survey.AskOne(prompt, &isExecuted)
-
-			if err != nil {
-				return err
-			}
-			if isExecuted {
-
-				respBody := ""
-				prompt := &survey.Input{
-					Renderer: survey.Renderer{},
-					Message:  "Set response body",
-					Default:  "response-to",
-					Help:     "",
-				}
-				err := survey.AskOne(prompt, &respBody)
-				if err != nil {
-					return err
-				}
-				err = client.R().SetRequestId(query.Id).SetExecutedAt(time.Now()).SetResponseTo(query.ResponseTo).SetBody([]byte(respBody)).Send(ctx)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			err = client.R().SetRequestId(query.Id).SetError(fmt.Errorf("query not executed")).SetResponseTo(query.ResponseTo).Send(ctx)
-			if err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return nil
+	utils.Println("waiting for the next query body...")
+	err = grpcclient.Receive(ctx, client, func(ctx context.Context) (grpcclient.Stream[*pb.Request], error) {
+		return client.SubscribeToRequests(ctx, sub)
+	}, func(query *pb.Request) error {
+		if err := o.handle(ctx, client, query); err != nil {
+			return err
 		}
+		utils.Println("waiting for the next query body...")
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("receive queries messages, %s", err.Error())
 	}
+	return nil
+}
 
+func (o *ReceiveOptions) handle(ctx context.Context, client *grpcclient.Client, query *pb.Request) error {
+	printQueryReceive(query)
+	if o.autoResponse {
+		if err := client.Respond(ctx, query, []byte("executed your query"), nil); err != nil {
+			return err
+		}
+		utils.Println("auto execution sent executed response ")
+		return nil
+	}
+	var isExecuted bool
+	prompt := &survey.Confirm{
+		Renderer: survey.Renderer{},
+		Message:  "Set executed ?",
+		Help:     "",
+	}
+	if err := survey.AskOne(prompt, &isExecuted); err != nil {
+		return err
+	}
+	if !isExecuted {
+		return client.Respond(ctx, query, nil, fmt.Errorf("query not executed"))
+	}
+	respBody := ""
+	bodyPrompt := &survey.Input{
+		Renderer: survey.Renderer{},
+		Message:  "Set response body",
+		Default:  "response-to",
+		Help:     "",
+	}
+	if err := survey.AskOne(bodyPrompt, &respBody); err != nil {
+		return err
+	}
+	return client.Respond(ctx, query, []byte(respBody), nil)
 }

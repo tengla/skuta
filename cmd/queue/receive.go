@@ -3,9 +3,13 @@ package queue
 import (
 	"context"
 	"fmt"
+
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/utils"
+	"github.com/tengla/skuta/pkg/uuid"
 )
 
 type ReceiveOptions struct {
@@ -74,7 +78,7 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 	} else {
 		utils.Printlnf("Pulling %d messages from %s 'queues' channel, waiting for %d seconds...", o.messages, o.channel, o.wait)
 	}
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -84,11 +88,13 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 	}()
 
 	for {
-		res, err := client.RQM().
-			SetChannel(o.channel).
-			SetWaitTimeSeconds(o.wait).
-			SetMaxNumberOfMessages(o.messages).
-			Send(ctx)
+		res, err := client.ReceiveQueueMessages(ctx, &pb.ReceiveQueueMessagesRequest{
+			RequestID:           uuid.New(),
+			ClientID:            client.ClientID(),
+			Channel:             o.channel,
+			MaxNumberOfMessages: int32(o.messages),
+			WaitTimeSeconds:     int32(o.wait),
+		})
 		if err != nil {
 			return fmt.Errorf("receive 'queues' messages, %s", err.Error())
 		}

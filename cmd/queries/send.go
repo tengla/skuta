@@ -3,6 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
+	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 	"time"
@@ -77,7 +79,7 @@ func (o *SendOptions) Validate() error {
 }
 
 func (o *SendOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -86,15 +88,18 @@ func (o *SendOptions) Run(ctx context.Context) error {
 		_ = client.Close()
 	}()
 	fmt.Println("Sending Query:")
-	msg := client.Q().
-		SetChannel(o.channel).
-		SetId(uuid.New()).
-		SetBody([]byte(o.body)).
-		SetMetadata(o.metadata).
-		SetTimeout(time.Duration(o.timeout) * time.Second)
+	msg := &pb.Request{
+		RequestID:       uuid.New(),
+		RequestTypeData: pb.Request_Query,
+		ClientID:        client.ClientID(),
+		Channel:         o.channel,
+		Metadata:        o.metadata,
+		Body:            []byte(o.body),
+		Timeout:         int32((time.Duration(o.timeout) * time.Second).Milliseconds()),
+	}
 
 	printQuery(msg)
-	res, err := msg.Send(ctx)
+	res, err := client.SendRequest(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("sending query body, %s", err.Error())
 	}

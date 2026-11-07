@@ -3,12 +3,13 @@ package commands
 import (
 	"context"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/tengla/skuta/pkg/utils"
-	"time"
 
+	"github.com/AlecAivazis/survey/v2"
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/utils"
 )
 
 type ReceiveOptions struct {
@@ -67,7 +68,7 @@ func (o *ReceiveOptions) Validate() error {
 }
 
 func (o *ReceiveOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -76,56 +77,48 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 		_ = client.Close()
 	}()
 
-	errChan := make(chan error, 1)
-	commandsChan, err := client.SubscribeToCommands(ctx, o.channel, o.group, errChan)
-
-	if err != nil {
-		utils.Println(fmt.Errorf("receive commands messages, %s", err.Error()).Error())
+	sub := &pb.Subscribe{
+		SubscribeTypeData: pb.Subscribe_Commands,
+		ClientID:          client.ClientID(),
+		Channel:           o.channel,
+		Group:             o.group,
 	}
-	for {
-		utils.Println("waiting for the next command body...")
-		select {
-		case err := <-errChan:
-			return fmt.Errorf("server disconnected with error: %s", err.Error())
-		case command, opened := <-commandsChan:
-			if !opened {
-				utils.Println("server disconnected")
-				return nil
-			}
-			printCommandReceive(command)
-			if o.autoResponse {
-				err = client.R().SetRequestId(command.Id).SetExecutedAt(time.Now()).SetResponseTo(command.ResponseTo).Send(ctx)
-				if err != nil {
-					return err
-				}
-				utils.Println("auto execution sent executed response ")
-				continue
-			}
-			var isExecuted bool
-			prompt := &survey.Confirm{
-				Renderer: survey.Renderer{},
-				Message:  "Set executed ?",
-				Help:     "",
-			}
-			err := survey.AskOne(prompt, &isExecuted)
-
-			if err != nil {
-				return err
-			}
-			if isExecuted {
-				err = client.R().SetRequestId(command.Id).SetExecutedAt(time.Now()).SetResponseTo(command.ResponseTo).Send(ctx)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			err = client.R().SetRequestId(command.Id).SetError(fmt.Errorf("commnad not executed")).SetResponseTo(command.ResponseTo).Send(ctx)
-			if err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return nil
+	utils.Println("waiting for the next command body...")
+	err = grpcclient.Receive(ctx, client, func(ctx context.Context) (grpcclient.Stream[*pb.Request], error) {
+		return client.SubscribeToRequests(ctx, sub)
+	}, func(command *pb.Request) error {
+		if err := o.handle(ctx, client, command); err != nil {
+			return err
 		}
+		utils.Println("waiting for the next command body...")
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("receive commands messages, %s", err.Error())
 	}
+	return nil
+}
 
+func (o *ReceiveOptions) handle(ctx context.Context, client *grpcclient.Client, command *pb.Request) error {
+	printCommandReceive(command)
+	if o.autoResponse {
+		if err := client.Respond(ctx, command, nil, nil); err != nil {
+			return err
+		}
+		utils.Println("auto execution sent executed response ")
+		return nil
+	}
+	var isExecuted bool
+	prompt := &survey.Confirm{
+		Renderer: survey.Renderer{},
+		Message:  "Set executed ?",
+		Help:     "",
+	}
+	if err := survey.AskOne(prompt, &isExecuted); err != nil {
+		return err
+	}
+	if isExecuted {
+		return client.Respond(ctx, command, nil, nil)
+	}
+	return client.Respond(ctx, command, nil, fmt.Errorf("command not executed"))
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	sdk "github.com/kubemq-io/kubemq-go"
 	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/pkg/api/actions"
 	"github.com/tengla/skuta/services/metrics"
@@ -142,37 +141,6 @@ func subscribeToEventsWithInternalClient(ctx context.Context, client *InternalCl
 
 	return nil
 }
-func subscribeToEvents(ctx context.Context, client *sdk.Client, channel, group string, messagesCh chan *actions.SubscribePubSubMessage, errChan chan error) error {
-	eventsChan, err := client.SubscribeToEvents(ctx, channel, group, errChan)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for {
-			select {
-			case event, ok := <-eventsChan:
-				if !ok {
-					return
-				}
-				msg := actions.NewSubscribePubSubMessage()
-				if len(event.Tags) > 0 {
-					data, _ := json.Marshal(event.Tags)
-					msg.SetTags(string(data))
-				}
-				msg.SetBody(detectAndConvertToAny(event.Body)).
-					SetMetadata(event.Metadata).
-					SetTimestamp(time.Now()).
-					SetMessageId(event.Id)
-				messagesCh <- msg
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
-	return nil
-}
-
 func subscribeToEventsStoreWithInternalClient(ctx context.Context, client *InternalClient, channel, group, clientId, subType, subValue string, messagesCh chan *actions.SubscribePubSubMessage, errChan chan error) error {
 	var subOption pb.Subscribe_EventsStoreType
 	var subOptionIntValue int64

@@ -183,6 +183,40 @@ audit:
 
 The audit log has one JSON line per request with the time, transport, remote address, subject, token ID, client ID, operation, action, channel type, channel and outcome (`allowed`, `denied` or `unauthenticated`). On a stream, each channel is logged once per stream rather than per message. On the dashboard, sign-ins, actions and opened subscriptions are logged, but not page refreshes. It works without authentication too, without subjects.
 
+### TLS
+
+gRPC (port 50000) and REST (port 9090) use TLS when the `security` section has a certificate and key. Add a CA and they require mTLS: clients must present a certificate signed by that CA.
+
+```yaml
+security:
+  cert:
+    filename: /etc/kubemq/server.pem      # or data: with the PEM inline
+  key:
+    filename: /etc/kubemq/server-key.pem
+  ca:
+    filename: /etc/kubemq/clients-ca.pem  # optional: require client certificates
+```
+
+or `SECURITY_CERT_FILENAME`, `SECURITY_KEY_FILENAME` and `SECURITY_CA_FILENAME`. Port 8080 (dashboard, API, MCP) stays plain HTTP; put a proxy that terminates TLS in front of it.
+
+The `kubemq` CLI connects with TLS when `client.tls` is enabled:
+
+```yaml
+client:
+  grpcHost: broker.example.com
+  tls:
+    enable: true
+    ca:
+      filename: ca.pem           # empty: the system's trusted CAs
+    cert:
+      filename: client.pem       # the client certificate, for mTLS
+    key:
+      filename: client-key.pem
+    serverName: ""               # name to check in the server's certificate, grpcHost by default
+```
+
+or `CLIENT_TLS_ENABLE`, `CLIENT_TLS_CA_FILENAME`, `CLIENT_TLS_CERT_FILENAME`, `CLIENT_TLS_KEY_FILENAME` and `CLIENT_TLS_SERVER_NAME`. kubemq-js presents a client certificate with `tls.clientCert` and `tls.clientKey`. kubemq-go (v1.9.0) can't present one, so it can't connect to a server in mTLS mode.
+
 ### Tracing
 
 The server can export OpenTelemetry traces over OTLP to any collector (Jaeger, Tempo, Honeycomb, the OpenTelemetry Collector, and so on). It is off by default:

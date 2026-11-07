@@ -3,9 +3,13 @@ package queue
 import (
 	"context"
 	"fmt"
+
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/utils"
+	"github.com/tengla/skuta/pkg/uuid"
 )
 
 type AckOptions struct {
@@ -62,7 +66,7 @@ func (o *AckOptions) Validate() error {
 }
 
 func (o *AckOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -70,10 +74,12 @@ func (o *AckOptions) Run(ctx context.Context) error {
 	defer func() {
 		_ = client.Close()
 	}()
-	res, err := client.AQM().
-		SetChannel(o.channel).
-		SetWaitTimeSeconds(o.wait).
-		Send(ctx)
+	res, err := client.AckAllQueueMessages(ctx, &pb.AckAllQueueMessagesRequest{
+		RequestID:       uuid.New(),
+		ClientID:        client.ClientID(),
+		Channel:         o.channel,
+		WaitTimeSeconds: int32(o.wait),
+	})
 	if err != nil {
 		return fmt.Errorf("ack all 'queues' messages, %s", err.Error())
 	}

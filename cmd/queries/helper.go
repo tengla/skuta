@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kubemq "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
 	"strconv"
+	"time"
 )
 
 type object struct {
@@ -24,11 +25,11 @@ type object struct {
 	CacheHit   string            `json:"cache_hit,omitempty"`
 }
 
-func newObjectWithQueryReceive(query *kubemq.QueryReceive) *object {
+func newObjectWithQueryReceive(query *pb.Request) *object {
 	obj := &object{
-		Id:         query.Id,
+		Id:         query.RequestID,
 		Channel:    query.Channel,
-		ClientId:   query.ClientId,
+		ClientId:   query.ClientID,
 		Metadata:   query.Metadata,
 		Tags:       query.Tags,
 		BodyJson:   json.RawMessage{},
@@ -53,17 +54,17 @@ func newObjectWithQueryReceive(query *kubemq.QueryReceive) *object {
 
 	return obj
 }
-func newObjectWithQueryResponse(response *kubemq.QueryResponse) *object {
+func newObjectWithQueryResponse(response *pb.Response) *object {
 	obj := &object{
-		Id:         response.QueryId,
+		Id:         response.RequestID,
 		Channel:    "",
-		ClientId:   response.ResponseClientId,
+		ClientId:   response.ClientID,
 		Metadata:   response.Metadata,
 		Tags:       response.Tags,
 		BodyJson:   json.RawMessage{},
 		BodyString: "",
 		Executed:   strconv.FormatBool(response.Executed),
-		ExecutedAt: response.ExecutedAt.Format("2006-01-02 15:04:05.999"),
+		ExecutedAt: time.Unix(response.Timestamp, 0).Format("2006-01-02 15:04:05.999"),
 		Error:      response.Error,
 		CacheHit:   strconv.FormatBool(response.CacheHit),
 	}
@@ -81,14 +82,14 @@ func newObjectWithQueryResponse(response *kubemq.QueryResponse) *object {
 	}
 	return obj
 }
-func newObjectWithCommand(query *kubemq.Query) *object {
+func newObjectWithQuery(query *pb.Request) *object {
 	obj := &object{
-		Id:         query.Id,
+		Id:         query.RequestID,
 		Channel:    query.Channel,
-		ClientId:   query.ClientId,
+		ClientId:   query.ClientID,
 		Metadata:   query.Metadata,
 		Tags:       query.Tags,
-		Timeout:    query.Timeout.String(),
+		Timeout:    (time.Duration(query.Timeout) * time.Millisecond).String(),
 		BodyJson:   json.RawMessage{},
 		BodyString: "",
 		Executed:   "",
@@ -115,13 +116,13 @@ func (o *object) String() string {
 	return string(data)
 }
 
-func printQueryReceive(query *kubemq.QueryReceive) {
+func printQueryReceive(query *pb.Request) {
 	fmt.Println(newObjectWithQueryReceive(query))
 }
 
-func printQueryResponse(response *kubemq.QueryResponse) {
+func printQueryResponse(response *pb.Response) {
 	fmt.Println(newObjectWithQueryResponse(response))
 }
-func printQuery(query *kubemq.Query) {
-	fmt.Println(newObjectWithCommand(query))
+func printQuery(query *pb.Request) {
+	fmt.Println(newObjectWithQuery(query))
 }

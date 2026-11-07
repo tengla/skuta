@@ -3,6 +3,8 @@ package events
 import (
 	"context"
 	"fmt"
+	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 
@@ -79,7 +81,7 @@ func (o *SendOptions) Validate() error {
 }
 
 func (o *SendOptions) Run(ctx context.Context) error {
-	client, err := utils.GetKubeMQClient(ctx, o.cfg)
+	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
 		return fmt.Errorf("create kubemq client, %s", err.Error())
 	}
@@ -90,14 +92,19 @@ func (o *SendOptions) Run(ctx context.Context) error {
 
 	fmt.Println("Sending Events:")
 	for i := 1; i <= o.messages; i++ {
-		msg := client.E().
-			SetChannel(o.channel).
-			SetId(uuid.New()).
-			SetBody([]byte(o.body)).
-			SetMetadata(o.metadata)
-		err = msg.Send(ctx)
+		msg := &pb.Event{
+			EventID:  uuid.New(),
+			ClientID: client.ClientID(),
+			Channel:  o.channel,
+			Metadata: o.metadata,
+			Body:     []byte(o.body),
+		}
+		result, err := client.SendEvent(ctx, msg)
 		if err != nil {
 			return fmt.Errorf("sending 'events' body, %s", err.Error())
+		}
+		if !result.Sent {
+			return fmt.Errorf("sending 'events' body, %s", result.Error)
 		}
 		printEvent(msg)
 	}

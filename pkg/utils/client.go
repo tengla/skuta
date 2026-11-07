@@ -1,31 +1,12 @@
 package utils
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/kubemq-io/kubemq-go"
 	"github.com/tengla/skuta/config"
-	"github.com/tengla/skuta/pkg/uuid"
-	"time"
 )
-
-func GetKubeMQClient(ctx context.Context, cfg *config.Config) (*kubemq.Client, error) {
-	clientID := cfg.Client.ClientID
-	if clientID == "" {
-		clientID = uuid.New()
-	}
-	return kubemq.NewClient(ctx,
-		kubemq.WithAddress(cfg.Client.GrpcHost, cfg.Client.GrpcPort),
-		kubemq.WithClientId(clientID),
-		kubemq.WithTransportType(kubemq.TransportTypeGRPC),
-		kubemq.WithAutoReconnect(true),
-		kubemq.WithReconnectInterval(time.Second),
-		kubemq.WithMaxReconnects(0),
-		kubemq.WithAuthToken(cfg.Client.AuthToken))
-}
 
 // APIRequest starts a request to the API server (client.apiAddress), with
 // client.authToken as a bearer token when it is set.
