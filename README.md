@@ -33,7 +33,7 @@ There are no prebuilt images or binaries yet.
 ### Docker
 
 ```bash
-docker build --build-arg VERSION=v2.4.0 -t skuta .
+docker build --build-arg VERSION=$(git describe --tags --always --dirty) -t skuta .
 docker run -d -p 8080:8080 -p 50000:50000 -p 9090:9090 skuta
 ```
 
@@ -44,7 +44,7 @@ Then open [http://localhost:8080](http://localhost:8080).
 Requires Go 1.26 or later. The dashboard is committed in `assets/` and embedded in the binary, so Node.js is only needed if you change it.
 
 ```bash
-task build          # or: go build -o kubemq -ldflags "-X 'main.version=v2.4.0'" .
+task build          # or plain `go build -o kubemq .`, which reports the commit as its version
 ./kubemq server
 ```
 

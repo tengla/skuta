@@ -7,7 +7,7 @@ KubeMQ Community: the open-source, single-binary KubeMQ message broker (Go modul
 ## Commands
 
 ```bash
-go build -o kubemq -ldflags "-X 'main.version=v2.4.0'" .   # build (version is injected via ldflags)
+task build                                                # build; injects the version (git describe) via ldflags
 go run . server                                           # run broker: gRPC :50000, REST :9090, web UI/API :8080
 go test ./...                                             # all tests
 go test ./interfaces/grpc -run TestName -v                # single test
@@ -19,7 +19,7 @@ task smoke -- localhost:50000                             # kubemq-js SDK smoke 
 task bench -- -addr localhost:50000 -out new.json         # benchmarks (test/bench) against a running server; `go run ./test/bench compare old.json new.json` compares two runs
 ```
 
-`Taskfile.yml` (go-task) holds the release flow (`task release` = git tag + multi-arch buildx push + goreleaser). `VERSION` there is the release version; bump it for releases. The default `task` target builds `kubemq.exe` (Windows-oriented).
+`Taskfile.yml` (go-task) holds the release flow (`task release VERSION=vX.Y.Z` = git tag + multi-arch buildx push + goreleaser). The version is the git tag: Taskfile's `VERSION` comes from `git describe --tags --always --dirty` and is injected into `main.version` with ldflags. Don't write version numbers into files. A build without ldflags reports `devel-<commit>` (`buildVersion` in `main.go`). The default `task` target builds `kubemq.exe` (Windows-oriented).
 
 ## Architecture
 
