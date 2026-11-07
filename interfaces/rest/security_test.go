@@ -2,13 +2,19 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"syscall"
+	"testing"
+	"time"
+
 	"github.com/fortytw2/leaktest"
 	sdk "github.com/kubemq-io/kubemq-go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
-	"testing"
+	"github.com/tengla/skuta/pkg/tlstest"
 )
 
 const (
@@ -94,4 +100,52 @@ func TestRestServer_TLS(t *testing.T) {
 	err = client.Close()
 	require.NoError(t, err)
 
+}
+
+func TestRestServer_MTLS(t *testing.T) {
+	defer leaktest.Check(t)()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	certs := tlstest.New(t)
+	appConfig := getAppConfig()
+	appConfig.Security = &config.SecurityConfig{
+		Cert: &config.ResourceConfig{Data: certs.Server.Cert},
+		Key:  &config.ResourceConfig{Data: certs.Server.Key},
+		Ca:   &config.ResourceConfig{Data: certs.CA},
+	}
+	port, svc, s := setup(ctx, t, appConfig)
+	defer tearDown(svc, s)
+
+	ping := func(t *testing.T, client *tlstest.Pair) error {
+		transport := &http.Transport{TLSClientConfig: certs.ClientTLS(t, client)}
+		defer transport.CloseIdleConnections()
+		httpClient := &http.Client{Transport: transport, Timeout: 5 * time.Second}
+		var resp *http.Response
+		var err error
+		// The server starts listening in the background.
+		require.Eventually(t, func() bool {
+			resp, err = httpClient.Get(fmt.Sprintf("https://localhost:%d/ping", port))
+			return err == nil || !isConnRefused(err)
+		}, 5*time.Second, 50*time.Millisecond)
+		if err != nil {
+			return err
+		}
+		_ = resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		return nil
+	}
+
+	t.Run("trusted client certificate", func(t *testing.T) {
+		require.NoError(t, ping(t, &certs.Client))
+	})
+	t.Run("no client certificate", func(t *testing.T) {
+		require.Error(t, ping(t, nil))
+	})
+	t.Run("client certificate from another CA", func(t *testing.T) {
+		require.Error(t, ping(t, &certs.Untrusted))
+	})
+}
+
+func isConnRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED)
 }

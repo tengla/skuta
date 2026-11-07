@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 )
 
@@ -76,4 +78,39 @@ func (s *SecurityConfig) Mode() SecurityModeType {
 		return SecurityModeTLS
 	}
 	return SecurityModeNone
+}
+
+// TLSConfig builds the server's TLS settings, or returns nil when TLS is off.
+// In mTLS mode clients must present a certificate signed by Ca.
+func (s *SecurityConfig) TLSConfig() (*tls.Config, error) {
+	mode := s.Mode()
+	if mode == SecurityModeNone {
+		return nil, nil
+	}
+	certBlock, err := s.Cert.Get()
+	if err != nil {
+		return nil, fmt.Errorf("invalid cert data: %s", err.Error())
+	}
+	keyBlock, err := s.Key.Get()
+	if err != nil {
+		return nil, fmt.Errorf("invalid key data: %s", err.Error())
+	}
+	cert, err := tls.X509KeyPair(certBlock, keyBlock)
+	if err != nil {
+		return nil, fmt.Errorf("invalid cert and key pair: %s", err.Error())
+	}
+	cfg := &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
+	if mode == SecurityModeMTLS {
+		caBlock, err := s.Ca.Get()
+		if err != nil {
+			return nil, fmt.Errorf("invalid ca data: %s", err.Error())
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(caBlock) {
+			return nil, fmt.Errorf("invalid ca data: no PEM certificates found")
+		}
+		cfg.ClientCAs = pool
+		cfg.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+	return cfg, nil
 }

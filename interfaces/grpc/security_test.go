@@ -2,12 +2,19 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"testing"
+	"time"
+
 	"github.com/fortytw2/leaktest"
 	sdk "github.com/kubemq-io/kubemq-go"
+	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
-	"testing"
+	"github.com/tengla/skuta/pkg/tlstest"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -91,36 +98,6 @@ nw7LJq5nHecpltxIZfS5abf6GbXKILQnlm98QDva54jg9N4CtaavJMOw1AH6rlHS
 fzGT65B+/yDTvssTNxMSK7djPVQ4i+oeiMGhHJjihStDQhzEI+0lisk3z60oVq73
 CmRxliAhDXR5wgmEfBcPIRi+Mw==
 -----END PRIVATE KEY-----`
-
-	testCa = `-----BEGIN CERTIFICATE-----
-MIIE9DCCA1ygAwIBAgIRAMttD77JeToMiarbltEieXwwDQYJKoZIhvcNAQELBQAw
-gZExHjAcBgNVBAoTFW1rY2VydCBkZXZlbG9wbWVudCBDQTEzMDEGA1UECwwqREVT
-S1RPUC1MTkI3UDIwXGxpb3IubmFiYXRAREVTS1RPUC1MTkI3UDIwMTowOAYDVQQD
-DDFta2NlcnQgREVTS1RPUC1MTkI3UDIwXGxpb3IubmFiYXRAREVTS1RPUC1MTkI3
-UDIwMB4XDTE4MTEyNTE3Mjc0NloXDTI4MTEyNTE3Mjc0NlowgZExHjAcBgNVBAoT
-FW1rY2VydCBkZXZlbG9wbWVudCBDQTEzMDEGA1UECwwqREVTS1RPUC1MTkI3UDIw
-XGxpb3IubmFiYXRAREVTS1RPUC1MTkI3UDIwMTowOAYDVQQDDDFta2NlcnQgREVT
-S1RPUC1MTkI3UDIwXGxpb3IubmFiYXRAREVTS1RPUC1MTkI3UDIwMIIBojANBgkq
-hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAtmlegs3xrXi3Ccw4R281LP1C1Ra8IQBr
-4OcxeHV5jEOgjDAdX9GuU4m1Bb8zmYeR0/VOh4S7CX/10IMRnc18q9cLm5wTUfPl
-LG1Kr44jMdzjXq5lbJbqWD/AOfElBB2AMCALoQPUWYT523c0nxGJvjsVsL/+WHNQ
-kohToKhX3NppkaHv7u5GJXaGHGrf/p6H+TRL8gu8QPSDoX7aGPuad3j4FQq/3IyS
-vkZ1Or/ka8eTdPPGSjaWik7hOVBsKM4A/4nEGU7rIZDNGm9a88itsaWMh8O59oL9
-XJUK18Ff+Ja+JC6PaOQvKwKpA+U1oEz76MYQwVcYZignlIpEH8qAYT/QoNs+J/pZ
-8iL9wG6/LU5nQx88rbdoV72hQqphTyat0+hf6Uzgwy7RCRUkm0ElBrajom798mEV
-ptui95LKczr/2tMpdCpPRE096gh2Y6QfsNv4lJY3DiFY7BrJ+zKKeKc7+zEztd3B
-OsMhUaKbGNIO3JhG+RtnReQl5HLkPLjnAgMBAAGjRTBDMA4GA1UdDwEB/wQEAwIC
-BDASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBTmAVGswAlUo2ofrfN6WGf7
-NB57/jANBgkqhkiG9w0BAQsFAAOCAYEAJhJ1dmazjkUXZ5CMFT0qF+NYmNHs2NRc
-WBDQa46VXuepu13IxAVdUSGLNUGK/H4WkKqS7bxiBUc/8lwrml6khI7j3c33EiDp
-tKIlaUugbczmIfsRAypbA45ZwluVX8fnQNBVKbz9Mf0gdsLzPLd5ReOo6g4AzNHS
-PsH2bb1o2hOG21d36stFtoUvcn4+Sa5/etFvZy++zu3ytsPdUjYBvpt9jRXa4+Tb
-DkuKBk3MW6dBYDsyx9CtThjuhQT4Q7i7Ds1hjntbGGYZgpL1ssbhMjpGaFTmwbS1
-RzisWhEtP8UJHv4SrrEDToWdd83aHpemp9j/NOr70r8H3BTW8tuaglqXStzvhX7x
-w+1Xp35MNUF+gJCnbZ8UjoBG+207Oc1DK7AIpgAF/ro0iVXMzSrgDCQOPmlK9tax
-obHstag0p3n8+TFVCUL5A1t6QBTsWiw/6PEwWnwT8+WrtBOl2J+I9wU3r6ZTct4H
-Qs2jN+XOsEMkxIj/qshAGNUCy8TjjSM6
------END CERTIFICATE-----`
 )
 
 func TestGRPCServer_TLS(t *testing.T) {
@@ -179,29 +156,34 @@ func TestGRPCServer_MTLS(t *testing.T) {
 	defer leaktest.Check(t)()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	certs := tlstest.New(t)
 	appConfig := getAppConfig()
-	secConfig := &config.SecurityConfig{
-		Cert: &config.ResourceConfig{
-			Filename: "",
-			Data:     testCert,
-		},
-		Key: &config.ResourceConfig{
-			Filename: "",
-			Data:     testKey,
-		},
-		Ca: &config.ResourceConfig{
-			Filename: "",
-			Data:     testCa,
-		},
+	appConfig.Security = &config.SecurityConfig{
+		Cert: &config.ResourceConfig{Data: certs.Server.Cert},
+		Key:  &config.ResourceConfig{Data: certs.Server.Key},
+		Ca:   &config.ResourceConfig{Data: certs.CA},
 	}
-
-	appConfig.Security = secConfig
 	appConfig, gs, svc := setup(ctx, t, appConfig)
 	defer tearDown(gs, svc)
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC), sdk.WithCertificate(testCert, ""), sdk.WithCheckConnection(true))
-	require.NoError(t, err)
-	require.NotNil(t, client)
-	err = client.Close()
-	require.NoError(t, err)
 
+	ping := func(t *testing.T, client *tlstest.Pair) error {
+		conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", appConfig.Grpc.Port),
+			grpc.WithTransportCredentials(credentials.NewTLS(certs.ClientTLS(t, client))))
+		require.NoError(t, err)
+		defer conn.Close()
+		pingCtx, pingCancel := context.WithTimeout(ctx, 5*time.Second)
+		defer pingCancel()
+		_, err = pb.NewKubemqClient(conn).Ping(pingCtx, &pb.Empty{})
+		return err
+	}
+
+	t.Run("trusted client certificate", func(t *testing.T) {
+		require.NoError(t, ping(t, &certs.Client))
+	})
+	t.Run("no client certificate", func(t *testing.T) {
+		require.Error(t, ping(t, nil))
+	})
+	t.Run("client certificate from another CA", func(t *testing.T) {
+		require.Error(t, ping(t, &certs.Untrusted))
+	})
 }

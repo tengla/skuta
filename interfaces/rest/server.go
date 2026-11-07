@@ -191,19 +191,23 @@ func (s *Server) Run() error {
 
 		return nil
 	case config.SecurityModeTLS, config.SecurityModeMTLS:
-		certBlock, err := s.appConfig.Security.Cert.Get()
+		tlsConfig, err := s.appConfig.Security.TLSConfig()
 		if err != nil {
-
-			return errors.Errorf("secured rest server not started, invalid cert data : %s", err.Error())
+			return errors.Errorf("secured rest server not started: %s", err.Error())
 		}
-		keyBlock, err := s.appConfig.Security.Key.Get()
-		if err != nil {
-			return errors.Errorf("secured rest server not started,invalid key data: %s", err.Error())
+		// Echo's StartTLS only takes a cert and key, so the client
+		// certificate check that mTLS needs goes on its TLS server directly.
+		tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
+		srv := s.echoWebServer.TLSServer
+		srv.Addr = fmt.Sprintf(":%d", conf.Port)
+		srv.TLSConfig = tlsConfig
+		if s.appConfig.Security.Mode() == config.SecurityModeMTLS {
+			s.logger.Warnf("started mTLS secured rest server at port %d", conf.Port)
+		} else {
+			s.logger.Warnf("started TLS secured rest server at port %d", conf.Port)
 		}
-		s.logger.Warnw("started secured rest server at port %d", conf.Port)
 		go func() {
-			err = s.echoWebServer.StartTLS(fmt.Sprintf(":%d", conf.Port), certBlock, keyBlock)
-			if err != nil {
+			if err := s.echoWebServer.StartServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				s.logger.Errorf(err.Error())
 			}
 		}()

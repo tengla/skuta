@@ -35,3 +35,15 @@ Probably the SDK ignoring the server's error, since `sendQueueMessagesBatch` rep
 After oversized events of 64 to 70 MiB in one client session, later subscribes for 80 and 90 MiB failed with `8 RESOURCE_EXHAUSTED: Bandwidth exhausted or memory limit exceeded`. A later 31 MiB queue send on that client timed out after 60 s.
 
 The same 31 MiB send worked on a fresh client and server, so this needs its own reproduction. It isn't clear whether the client or the server is at fault.
+
+## TLS gaps in the `security` section
+
+Found 2026-11-07 by reading the code. Nothing here has been reproduced against a running server.
+
+### The API port has no TLS
+
+`security` applies to gRPC and REST only. The dashboard, `/api` and `/mcp` on `Api.Port` stay plain HTTP. Without a TLS-terminating proxy, Bearer tokens and the dashboard's session cookie cross the network unencrypted. The cookie is only marked `Secure` when the request came over HTTPS.
+
+### The CLI can't connect to a TLS server
+
+The `client` section has no TLS settings, and `GetKubeMQClient` in `pkg/utils/client.go` never gives the SDK a certificate. Once `security` is set, `kubemq events|events_store|commands|queries|queue` can no longer connect to that server.

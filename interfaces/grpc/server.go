@@ -1,8 +1,6 @@
 package grpc
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/interfaces/grpc/middleware/recovery"
@@ -44,50 +42,12 @@ func configureServer(svc *services.SystemServices, logger *logging.Logger, opts 
 	connOptions = append(connOptions, grpc.MaxRecvMsgSize(opts.maxSize))
 	connOptions = append(connOptions, grpc.MaxSendMsgSize(opts.maxSize))
 
-	switch opts.security.Mode() {
-	case config.SecurityModeTLS:
-		certBlock, err := opts.security.Cert.Get()
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "invalid cert data : %s", err.Error())
-		}
-		keyBlock, err := opts.security.Key.Get()
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "invalid key data: %s", err.Error())
-		}
-		certFromKeyPair, err := tls.X509KeyPair(certBlock, keyBlock)
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "error creating c509k certification: %s", err.Error())
-		}
-		creds := credentials.NewTLS(&tls.Config{Certificates: []tls.Certificate{certFromKeyPair}, MinVersion: tls.VersionTLS12})
-		connOptions = append(connOptions, grpc.Creds(creds))
-	case config.SecurityModeMTLS:
-		certBlock, err := opts.security.Cert.Get()
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "invalid cert data : %s", err.Error())
-		}
-		keyBlock, err := opts.security.Key.Get()
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "invalid key data: %s", err.Error())
-		}
-		certFromKeyPair, err := tls.X509KeyPair(certBlock, keyBlock)
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "error creating c509k certification: %s", err.Error())
-		}
-		caBlock, err := opts.security.Ca.Get()
-		if err != nil {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "invalid ca data: %s", err.Error())
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(caBlock) {
-			return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "credentials: failed to append certificates")
-		}
-		creds := credentials.NewTLS(&tls.Config{
-			RootCAs:      certPool,
-			Certificates: []tls.Certificate{certFromKeyPair},
-			MinVersion:   tls.VersionTLS12,
-		},
-		)
-		connOptions = append(connOptions, grpc.Creds(creds))
+	tlsConfig, err := opts.security.TLSConfig()
+	if err != nil {
+		return nil, errors.Wrapf(entities.ErrLoadTLSCertificate, "%s", err.Error())
+	}
+	if tlsConfig != nil {
+		connOptions = append(connOptions, grpc.Creds(credentials.NewTLS(tlsConfig)))
 	}
 
 	streamInterceptors := []grpc.StreamServerInterceptor{
