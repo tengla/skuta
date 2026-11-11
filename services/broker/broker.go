@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,6 +12,7 @@ import (
 	natsd "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/nats-io/nuid"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/entities"
 	"github.com/tengla/skuta/pkg/jstore"
@@ -21,6 +23,8 @@ import (
 const (
 	minMaxPending = 200 * 1024 * 1024
 	lockSuffix    = ".lock"
+	// clusterUser is the name nodes present to each other with cluster.secret.
+	clusterUser = "skuta"
 )
 
 func (s *Service) getBrokerOptions(appConfig *config.Config) *natsd.Options {
@@ -42,7 +46,58 @@ func (s *Service) getBrokerOptions(appConfig *config.Config) *natsd.Options {
 	if int64(opts.MaxPayload) > opts.MaxPending {
 		opts.MaxPending = int64(opts.MaxPayload)
 	}
+	if cluster := appConfig.Cluster; cluster != nil && cluster.Enable {
+		// Clients stay in-process; only the other nodes connect, on the cluster
+		// port. nats-server doesn't start routing with DontListen, so it gets a
+		// client port after all: a random one on loopback, closed to anyone
+		// without this process's token.
+		opts.DontListen = false
+		opts.Host = "127.0.0.1"
+		opts.Port = natsd.RANDOM_PORT
+		opts.Authorization = nuid.Next() + nuid.Next()
+		appConfig.Broker.MemoryPipe.SetToken(opts.Authorization)
+		opts.ServerName = appConfig.Host
+		opts.Cluster = natsd.ClusterOpts{Name: cluster.Name, Host: "0.0.0.0", Port: cluster.Port}
+		opts.Routes = clusterRoutes(cluster.Routes, cluster.Secret)
+		if cluster.Secret != "" {
+			opts.Cluster.Username = clusterUser
+			opts.Cluster.Password = cluster.Secret
+		}
+	}
 	return opts
+}
+
+func clusterRoutes(routes []string, secret string) []*url.URL {
+	list := make([]*url.URL, 0, len(routes))
+	for _, route := range routes {
+		u := &url.URL{Scheme: "nats", Host: route}
+		if secret != "" {
+			u.User = url.UserPassword(clusterUser, secret)
+		}
+		list = append(list, u)
+	}
+	return list
+}
+
+// waitForCluster waits until the nodes have elected a JetStream leader, which
+// takes a majority of them, so stored channels can be used.
+func (s *Service) waitForCluster(ctx context.Context) error {
+	s.logger.Infow("waiting for the cluster to elect a leader", "routes", s.appConfig.Cluster.Routes)
+	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
+	for {
+		reqCtx, reqCancel := context.WithTimeout(ctx, 2*time.Second)
+		_, err := s.admin.AccountInfo(reqCtx)
+		reqCancel()
+		if err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("the cluster has no leader after %s, are a majority of the nodes in cluster.routes running and reachable: %w", readyTimeout, err)
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
 }
 
 // lockStore takes the store's lock, so a second server can't write to the same
@@ -130,8 +185,9 @@ func (s *Service) startAsBroker(ctx context.Context, appConfig *config.Config) (
 		MaxBytes:                appConfig.Store.MaxQueueSize,
 		MaxMsgs:                 int64(appConfig.Store.MaxMessages),
 		ConsumerInactiveMinutes: appConfig.Store.MaxRetention,
+		Replicas:                appConfig.Cluster.StreamReplicas(),
 	})
-	s.adminConn, err = nats.Connect("", nats.InProcessServer(ns), nats.Name("broker-admin"))
+	s.adminConn, err = nats.Connect("", nats.InProcessServer(ns), nats.Name("broker-admin"), nats.Token(s.NatsOptions.Authorization))
 	if err != nil {
 		ns.Shutdown()
 		return err
@@ -142,12 +198,23 @@ func (s *Service) startAsBroker(ctx context.Context, appConfig *config.Config) (
 		ns.Shutdown()
 		return err
 	}
-	resetCtx, cancel := context.WithTimeout(ctx, readyTimeout)
-	defer cancel()
-	if err := jstore.ResetQueueConsumers(resetCtx, s.admin); err != nil {
-		s.adminConn.Close()
-		ns.Shutdown()
-		return err
+	if s.clustered() {
+		// The other nodes' subscribers share the queue consumers, so they are
+		// not reset here: what a crashed node held comes back after its hold
+		// runs out instead.
+		if err := s.waitForCluster(ctx); err != nil {
+			s.adminConn.Close()
+			ns.Shutdown()
+			return err
+		}
+	} else {
+		resetCtx, cancel := context.WithTimeout(ctx, readyTimeout)
+		defer cancel()
+		if err := jstore.ResetQueueConsumers(resetCtx, s.admin); err != nil {
+			s.adminConn.Close()
+			ns.Shutdown()
+			return err
+		}
 	}
 	if inactive := time.Duration(appConfig.Store.MaxPurgeInactive) * time.Minute; inactive > 0 {
 		go s.purgeInactiveChannels(ctx, inactive)
@@ -156,6 +223,10 @@ func (s *Service) startAsBroker(ctx context.Context, appConfig *config.Config) (
 	s.isHealthy.Store(true)
 	s.isReady.Store(true)
 	return nil
+}
+
+func (s *Service) clustered() bool {
+	return s.appConfig.Cluster != nil && s.appConfig.Cluster.Enable
 }
 
 // warnAboutOldStore tells whoever upgraded that NATS Streaming's files aren't

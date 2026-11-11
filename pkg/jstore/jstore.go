@@ -148,7 +148,7 @@ func (c *Conn) ensureStream(ctx context.Context, subject string) (string, error)
 		Storage:   jetstream.FileStorage,
 		Retention: retention,
 		Discard:   jetstream.DiscardOld,
-		Replicas:  1,
+		Replicas:  max(limits.Replicas, 1),
 		MaxAge:    time.Duration(limits.MaxAgeMinutes) * time.Minute,
 		MaxBytes:  orUnlimited(limits.MaxBytes),
 		MaxMsgs:   orUnlimited(limits.MaxMsgs),

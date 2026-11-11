@@ -19,6 +19,10 @@ const (
 	drainPoll       = 50 * time.Microsecond
 	recoverInterval = 200 * time.Millisecond
 
+	// ensureAttempts times apiTimeout is how long a subscriber waits for a
+	// cluster without a leader.
+	ensureAttempts = 3
+
 	defaultMaxInflight = 1024
 	queueConsumer      = "queue"
 )
@@ -164,9 +168,7 @@ func (c *Conn) Subscribe(subject string, cb func(*Msg), options ...SubOption) (*
 		wake:    make(chan struct{}, 1),
 		done:    make(chan struct{}),
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiTimeout)
-	defer cancel()
-	if err := s.ensureConsumer(ctx); err != nil {
+	if err := s.ensureConsumerRetrying(); err != nil {
 		return nil, err
 	}
 	var err error
@@ -194,6 +196,22 @@ func (c *Conn) Subscribe(subject string, cb func(*Msg), options ...SubOption) (*
 	return s, nil
 }
 
+// ensureConsumerRetrying asks again when nobody answers. While a cluster elects
+// a leader after losing a node, which takes some seconds, a request gets no
+// reply at all, not even later.
+func (s *Subscription) ensureConsumerRetrying() error {
+	var err error
+	for attempt := 0; attempt < ensureAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), apiTimeout)
+		err = s.ensureConsumer(ctx)
+		cancel()
+		if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, nats.ErrTimeout) {
+			return err
+		}
+	}
+	return err
+}
+
 func (s *Subscription) ensureConsumer(ctx context.Context) error {
 	if _, err := s.conn.ensureStream(ctx, s.subject); err != nil {
 		return wrapf(err, "create channel %s", s.subject)
@@ -213,6 +231,9 @@ func (s *Subscription) ensureConsumer(ctx context.Context) error {
 	if s.opts.durable == "" {
 		cfg.MemoryStorage = true
 		cfg.InactiveThreshold = time.Minute
+	} else {
+		// A durable consumer has to survive the loss of a node, like its stream.
+		cfg.Replicas = max(s.conn.pipe.Limits().Replicas, 1)
 	}
 	if s.opts.expiring {
 		cfg.InactiveThreshold = time.Duration(s.conn.pipe.Limits().ConsumerInactiveMinutes) * time.Minute

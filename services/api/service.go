@@ -184,6 +184,7 @@ func (s *service) getSnapshot(c echo.Context) error {
 	s.Lock()
 	channelsEntities := s.lastSnapshot.Entities["channels"]
 	clientsEntities := s.lastSnapshot.Entities["clients"]
+	s.lastSnapshot.System.ClusterNodes = s.broker.ClusterNodes()
 	snapshotDTO := api.NewSnapshotDTO([]*api.System{s.lastSnapshot.System}, channelsEntities, clientsEntities)
 	s.Unlock()
 	return res.SetResponseBody(snapshotDTO).Send()
@@ -316,6 +317,7 @@ func (s *service) handlerConnectionStatus(c echo.Context) error {
 			}
 			channelsEntities := s.lastSnapshot.Entities["channels"]
 			clientsEntities := s.lastSnapshot.Entities["clients"]
+			s.lastSnapshot.System.ClusterNodes = s.broker.ClusterNodes()
 			snapshotDTO := api.NewSnapshotDTO([]*api.System{s.lastSnapshot.System}, channelsEntities, clientsEntities)
 			if err := conn.WriteJSON(snapshotDTO); err != nil {
 				return nil

@@ -116,6 +116,7 @@ func (qc *QueueClient) connect(opts *Options) (*jstore.Conn, error) {
 	}
 	if opts.MemoryPipe != nil {
 		natsOpts.InProcessServer = opts.MemoryPipe
+		natsOpts.Token = opts.MemoryPipe.Token()
 	} else {
 		return nil, fmt.Errorf("no memory pipe exist")
 	}

@@ -88,6 +88,11 @@ func (s *Service) streamDetails() ([]natsd.StreamDetail, error) {
 	if s.Nats == nil {
 		return nil, fmt.Errorf("broker is not ready")
 	}
+	if s.clustered() {
+		ctx, cancel := context.WithTimeout(context.Background(), adminTimeout)
+		defer cancel()
+		return s.clusterStreamDetails(ctx)
+	}
 	jsz, err := s.Nats.Jsz(&natsd.JSzOptions{Streams: true, Consumer: true, Config: true, Accounts: true, Limit: maxListedStreams})
 	if err != nil {
 		return nil, err

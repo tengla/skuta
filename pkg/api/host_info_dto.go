@@ -20,15 +20,22 @@ type HostInfoDTO struct {
 	CpuCores          int     `json:"cpuCores"`
 	CpuUtilization    float64 `json:"cpuUtilization"`
 	ActiveClients     int     `json:"activeClients"`
+	// Nodes is how many cluster nodes this one sees, itself included.
+	Nodes int `json:"nodes"`
 }
 
 func NewHostInfoDTO(system *System) *HostInfoDTO {
+	role, nodes := "Standalone", 1
+	if system.ClusterNodes > 0 {
+		role, nodes = "Cluster", system.ClusterNodes
+	}
 	return &HostInfoDTO{
 		Host:              system.Hostname,
 		Version:           system.Version,
 		LastUpdate:        time.UnixMilli(system.UpdatedAt).Format("2006-01-02 15:04:05"),
 		Status:            "Running",
-		Role:              "Standalone",
+		Role:              role,
+		Nodes:             nodes,
 		Uptime:            (time.Duration(system.Uptime) * time.Second).String(),
 		MemoryAllocated:   humanize.BigBytes(big.NewInt(int64(system.ProcessMemoryAllocation))),
 		MemoryUsed:        humanize.BigBytes(big.NewInt(int64(system.ProcessMemory))),

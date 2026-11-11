@@ -10,6 +10,7 @@ import { formatBytes, formatCompact, formatRate, snapshot } from '../snapshot'
 
 const online = computed(() => !snapshot.error && snapshot.data != null)
 const healthy = computed(() => online.value && snapshot.host?.status === 'Running')
+const nodes = computed(() => snapshot.host?.nodes ?? 1)
 const healthState = computed(() => (healthy.value ? 'good' : snapshot.starting ? 'wait' : 'bad'))
 const latest = computed(() => snapshot.samples.at(-1))
 const total = computed(() => snapshot.data?.total ?? {})
@@ -63,7 +64,7 @@ const topChannels = computed(() =>
           {{ snapshot.loading ? 'Connecting…' : healthy ? 'Healthy' : snapshot.starting ? 'Starting…' : online ? snapshot.host?.status ?? 'Not ready' : 'Unreachable' }}
         </p>
         <p class="muted">
-          <template v-if="online">{{ snapshot.host?.role ?? 'Standalone' }} · 1 node</template>
+          <template v-if="online">{{ snapshot.host?.role ?? 'Standalone' }} · {{ nodes }} {{ nodes === 1 ? 'node' : 'nodes' }}</template>
           <template v-else-if="snapshot.starting">The broker is starting. This page updates when it's ready.</template>
           <template v-else-if="snapshot.error">Cannot load /api/snapshot: {{ snapshot.error }}</template>
         </p>

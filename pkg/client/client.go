@@ -111,6 +111,7 @@ func (c *Client) connect(opts *Options) error {
 	}
 	if opts.MemoryPipe != nil {
 		natsOpts.InProcessServer = opts.MemoryPipe
+		natsOpts.Token = opts.MemoryPipe.Token()
 	} else {
 		return fmt.Errorf("no memory pipe exist")
 	}

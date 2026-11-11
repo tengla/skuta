@@ -50,7 +50,7 @@ task build          # or plain `go build -o kubemq .`, which reports the commit 
 
 ### Kubernetes
 
-Run the image as a single replica and mount a persistent volume at `/kubemq/store` so messages survive pod restarts.
+Run the image as a single replica (or three, see [Clustering](#clustering)) and mount a persistent volume at `/kubemq/store` so messages survive pod restarts.
 
 Set the `HOST` environment variable to a fixed name, or use a StatefulSet. The store path includes the host name, which defaults to the pod's. A Deployment's pod gets a new name on each restart, so it would start with an empty store and leave the previous directory on the volume for good.
 
@@ -218,6 +218,40 @@ client:
 ```
 
 or `CLIENT_TLS_ENABLE`, `CLIENT_TLS_CA_FILENAME`, `CLIENT_TLS_CERT_FILENAME`, `CLIENT_TLS_KEY_FILENAME` and `CLIENT_TLS_SERVER_NAME`. kubemq-js presents a client certificate with `tls.clientCert` and `tls.clientKey`. kubemq-go (v1.9.0) can't present one, so it can't connect to a server in mTLS mode.
+
+### Clustering
+
+One server is the default and needs none of this. A cluster of three servers keeps a copy of every queue and events store channel on each of them, so messages and service survive the loss of one. Clients connect to any node: a message sent to one can be received from another, and events, commands and queries reach subscribers on every node.
+
+Run three nodes (or five). The nodes vote, and a majority has to agree: with three, one may be down; with two, losing either stops stored channels until it's back. A node that can't see a majority refuses queue and events store messages with an error instead of accepting what it might lose.
+
+```yaml
+cluster:
+  enable: true
+  name: skuta            # the same on every node
+  port: 6222             # where this node listens for the others
+  routes:                # every node's address, this one included or not
+    - skuta-0.skuta-nodes:6222
+    - skuta-1.skuta-nodes:6222
+    - skuta-2.skuta-nodes:6222
+  replicas: 3            # nodes that hold each channel: 1, 3 or 5
+  secret: ""             # password the nodes present to each other
+```
+
+or `CLUSTER_ENABLE`, `CLUSTER_NAME`, `CLUSTER_PORT`, `CLUSTER_ROUTES` (comma-separated), `CLUSTER_REPLICAS` and `CLUSTER_SECRET`.
+
+Each node needs its own store and a `HOST` that is unique and stays the same across restarts, which a StatefulSet's pod names are. Start the nodes together (`podManagementPolicy: Parallel`), since a node isn't ready before a majority is up, and let them find each other before they are ready (`publishNotReadyAddresses: true` on the headless Service). Everything else in the config, the JWT key and authorization rules included, should be the same on every node.
+
+Set `cluster.secret`: without it, anything that can reach the cluster port can join as a node and read every message. The connection between nodes isn't encrypted yet, so keep the port on a private network.
+
+What isn't cluster-wide yet:
+
+- A client ID is only checked for being unique on the node the client connects to.
+- The dashboard's traffic counters and the query cache are per node. Channel lists and queue depths are the cluster's.
+- `store.maxStorage` and `store.maxMemory` apply to each node.
+- When a node dies, the queue messages its clients held come back after about 30 seconds, not at once.
+
+A clustered node opens a NATS client port on loopback (a random port, protected by a token that never leaves the process), because the embedded server doesn't start clustering without one.
 
 ### Tracing
 

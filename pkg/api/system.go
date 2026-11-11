@@ -27,6 +27,9 @@ type System struct {
 	MemoryUtilization       float64 `json:"memory_utilization"`
 	UpdatedAt               int64   `json:"updatedAt"`
 	ActiveClients           int     `json:"activeClients"`
+	// ClusterNodes is how many nodes this one is connected to, itself included,
+	// or 0 for a server that isn't clustered.
+	ClusterNodes int `json:"clusterNodes"`
 }
 
 func NewSystem() *System {

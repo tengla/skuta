@@ -22,6 +22,8 @@ type Limits struct {
 	// ConsumerInactiveMinutes is how long the position of an events store
 	// subscriber is kept while it's away.
 	ConsumerInactiveMinutes int
+	// Replicas is how many cluster nodes hold each stream. Zero means one.
+	Replicas int
 }
 
 // Pipe is the handle clients use to reach the broker. It exists before the
@@ -31,6 +33,7 @@ type Pipe struct {
 	mu       sync.Mutex
 	provider ConnProvider
 	limits   Limits
+	token    string
 	clients  map[string]struct{}
 }
 
@@ -44,6 +47,21 @@ func (p *Pipe) Bind(provider ConnProvider, limits Limits) {
 	defer p.mu.Unlock()
 	p.provider = provider
 	p.limits = limits
+}
+
+// SetToken sets the token connections must present. Only a clustered broker
+// asks for one, see the broker's options.
+func (p *Pipe) SetToken(token string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.token = token
+}
+
+// Token returns the token to connect with, empty when the broker asks for none.
+func (p *Pipe) Token() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.token
 }
 
 // Unbind disconnects the pipe from a broker that is shutting down.

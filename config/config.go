@@ -67,6 +67,7 @@ type Config struct {
 	Tracing         *TracingConfig        `json:"tracing"`
 	Security        *SecurityConfig       `json:"security"`
 	Routing         *RoutingConfig        `json:"routing"`
+	Cluster         *ClusterConfig        `json:"cluster"`
 	startServerTime int64
 	version         string
 }
@@ -84,8 +85,8 @@ func (c *Config) GetVersion() string {
 const redactedValue = "REDACTED"
 
 // Redacted returns a copy of the config that is safe to show over HTTP: the
-// JWT key, the client token and the server's and client's TLS private keys
-// are masked.
+// JWT key, the client token, the server's and client's TLS private keys and
+// the cluster secret are masked.
 func (c *Config) Redacted() *Config {
 	data, err := json.Marshal(c)
 	if err != nil {
@@ -111,6 +112,9 @@ func (c *Config) Redacted() *Config {
 	}
 	if out.Security != nil && out.Security.Key != nil {
 		mask(&out.Security.Key.Data)
+	}
+	if out.Cluster != nil {
+		mask(&out.Cluster.Secret)
 	}
 	return out
 }
@@ -153,6 +157,7 @@ func GetDefaultConfig() *Config {
 		Tracing:         defaultTracingConfig(),
 		Security:        defaultSecurityConfig(),
 		Routing:         defaultRoutingConfig(),
+		Cluster:         defaultClusterConfig(),
 		startServerTime: 0,
 		version:         "",
 	}
@@ -368,6 +373,9 @@ func (c *Config) Validate() error {
 		return err
 	}
 	if err := c.Routing.Validate(); err != nil {
+		return err
+	}
+	if err := c.Cluster.Validate(); err != nil {
 		return err
 	}
 	return nil
