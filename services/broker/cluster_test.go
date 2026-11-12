@@ -177,3 +177,56 @@ func TestCluster_SecretIsRedacted(t *testing.T) {
 		t.Fatalf("redacted secret is %q", got)
 	}
 }
+
+// A send that arrives while a replicated channel is being created or deleted
+// can go unanswered. It must be sent again, and stored once.
+func TestCluster_SendsAroundChannelCreateAndDelete(t *testing.T) {
+	nodes := startCluster(t, 3)
+	const subject = "_QUEUES_.cluster.churn"
+	const perNode = 20
+	for round := 0; round < 6; round++ {
+		errs := make(chan error, 2*len(nodes))
+		for _, node := range nodes {
+			go func() {
+				var err error
+				for i := 0; i < perNode && err == nil; i++ {
+					err = node.conn.Publish(subject, []byte("single"))
+				}
+				errs <- err
+			}()
+			go func() {
+				items := make([]jstore.Item, perNode)
+				for i := range items {
+					items[i] = jstore.Item{Subject: subject, Data: []byte("batch")}
+				}
+				var err error
+				for _, itemErr := range node.conn.PublishBatch(items) {
+					if itemErr != nil {
+						err = itemErr
+					}
+				}
+				errs <- err
+			}()
+		}
+		for i := 0; i < 2*len(nodes); i++ {
+			select {
+			case err := <-errs:
+				if err != nil {
+					t.Fatalf("round %d: %v", round, err)
+				}
+			case <-time.After(30 * time.Second):
+				t.Fatalf("round %d: a send is still waiting after 30s", round)
+			}
+		}
+		queues, err := nodes[round%3].svc.GetQueues(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64(2 * perNode * len(nodes)); queues.TotalQueues != 1 || queues.Queues[0].Messages != want {
+			t.Fatalf("round %d: stored %+v, want %d messages in one queue", round, queues.Queues, want)
+		}
+		if err := nodes[round%3].svc.DeleteStoreChannel(context.Background(), subject); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

@@ -25,6 +25,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/nats-io/nuid"
 	"github.com/tengla/skuta/pkg/pipe"
 )
 
@@ -32,12 +33,21 @@ const (
 	publishTimeout  = 60 * time.Second
 	apiTimeout      = 10 * time.Second
 	asyncMaxPending = 4096
+	// attemptTimeout is how long a clustered publish waits for its reply
+	// before sending again, and dedupeWindow how long a stream remembers
+	// message IDs, which has to cover every retry.
+	attemptTimeout      = 3 * time.Second
+	firstAttemptTimeout = 250 * time.Millisecond
+	dedupeWindow        = 2 * time.Minute
+	noStreamWait        = 50 * time.Millisecond
 
 	// QueueSubjectPrefix starts the subjects of queue channels, including the
 	// one that holds delayed messages.
 	QueueSubjectPrefix = "_QUEUE"
 
 	errCodeMessageTooLarge = 10077
+	// The stream is still storing an earlier copy of a message sent again.
+	errCodeDuplicateInProcess = 10158
 )
 
 var (
@@ -149,9 +159,11 @@ func (c *Conn) ensureStream(ctx context.Context, subject string) (string, error)
 		Retention: retention,
 		Discard:   jetstream.DiscardOld,
 		Replicas:  max(limits.Replicas, 1),
-		MaxAge:    time.Duration(limits.MaxAgeMinutes) * time.Minute,
-		MaxBytes:  orUnlimited(limits.MaxBytes),
-		MaxMsgs:   orUnlimited(limits.MaxMsgs),
+		// Zero lets the server pick, as before, for a single node.
+		Duplicates: c.dedupe(limits),
+		MaxAge:     time.Duration(limits.MaxAgeMinutes) * time.Minute,
+		MaxBytes:   orUnlimited(limits.MaxBytes),
+		MaxMsgs:    orUnlimited(limits.MaxMsgs),
 	})
 	if err != nil {
 		return "", err
@@ -160,6 +172,78 @@ func (c *Conn) ensureStream(ctx context.Context, subject string) (string, error)
 	c.streams[name] = struct{}{}
 	c.mu.Unlock()
 	return name, nil
+}
+
+// clustered reports whether streams are replicated. A request sent while a
+// replicated stream is being created or deleted, or while it elects a leader,
+// can go unanswered, so publishing then works by retrying.
+func (c *Conn) clustered() bool {
+	return c.pipe.Limits().Replicas > 1
+}
+
+func (c *Conn) dedupe(limits pipe.Limits) time.Duration {
+	if limits.Replicas <= 1 {
+		return 0
+	}
+	if age := time.Duration(limits.MaxAgeMinutes) * time.Minute; age > 0 && age < dedupeWindow {
+		return age
+	}
+	return dedupeWindow
+}
+
+// attemptWait is how long a clustered publish waits for its reply before the
+// given attempt is given up and the message sent again. It starts short,
+// because the usual loss is the first message to a new stream, and a second
+// copy of a message that was only slow costs nothing.
+func attemptWait(attempt int) time.Duration {
+	wait := firstAttemptTimeout << min(attempt, 8)
+	return min(wait, attemptTimeout)
+}
+
+func retryable(err error) (noStream, unanswered bool) {
+	noStream = errors.Is(err, jetstream.ErrNoStreamResponse)
+	unanswered = errors.Is(err, context.DeadlineExceeded) || errors.Is(err, nats.ErrTimeout)
+	var apiErr *jetstream.APIError
+	if errors.As(err, &apiErr) && apiErr.ErrorCode == errCodeDuplicateInProcess {
+		// Ask again shortly: the answer is then that it's stored.
+		noStream = false
+		unanswered = true
+	}
+	return noStream, unanswered
+}
+
+// publishRetrying stores a message on a replicated stream, sending it again
+// when no reply comes. Every attempt carries the same ID, so the stream keeps
+// one copy however many arrive.
+func (c *Conn) publishRetrying(subject string, data []byte, id string) error {
+	deadline := time.Now().Add(publishTimeout)
+	for attempt := 0; ; attempt++ {
+		until := time.Now().Add(attemptWait(attempt))
+		if until.After(deadline) {
+			until = deadline
+		}
+		ctx, cancel := context.WithDeadline(context.Background(), until)
+		_, err := c.ensureStream(ctx, subject)
+		if err == nil {
+			_, err = c.js.Publish(ctx, subject, data, jetstream.WithMsgID(id))
+		}
+		cancel()
+		if err == nil {
+			return nil
+		}
+		noStream, unanswered := retryable(err)
+		if !(noStream || unanswered) || !time.Now().Before(deadline) {
+			return publishError(err)
+		}
+		if noStream {
+			// Deleted, or new and not yet reachable from this node.
+			c.forgetStream(StreamName(subject))
+		}
+		if time.Now().Before(until) {
+			// The reply came at once, so asking again at once gets the same.
+			time.Sleep(noStreamWait)
+		}
+	}
 }
 
 func orUnlimited(v int64) int64 {
@@ -213,6 +297,9 @@ func ResetQueueConsumers(ctx context.Context, js jetstream.JetStream) error {
 
 // Publish stores a message and returns once it's stored.
 func (c *Conn) Publish(subject string, data []byte) error {
+	if c.clustered() {
+		return c.publishRetrying(subject, data, nuid.Next())
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 	defer cancel()
 	name, err := c.ensureStream(ctx, subject)
@@ -240,6 +327,9 @@ type Item struct {
 // PublishBatch stores messages in order and returns once each is stored or
 // failed. The result has one error per item.
 func (c *Conn) PublishBatch(items []Item) []error {
+	if c.clustered() {
+		return c.publishBatchRetrying(items)
+	}
 	results := make([]error, len(items))
 	futures := make([]jetstream.PubAckFuture, len(items))
 	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
@@ -264,6 +354,61 @@ func (c *Conn) PublishBatch(items []Item) []error {
 			}
 			results[i] = publishError(err)
 		}
+	}
+	return results
+}
+
+// publishBatchRetrying is PublishBatch for replicated streams: what isn't
+// confirmed in time is sent again, in order, until it is or time runs out.
+func (c *Conn) publishBatchRetrying(items []Item) []error {
+	results := make([]error, len(items))
+	ids := make([]string, len(items))
+	pending := make([]int, len(items))
+	for i := range items {
+		ids[i] = nuid.Next()
+		pending[i] = i
+	}
+	deadline := time.Now().Add(publishTimeout)
+	for attempt := 0; len(pending) > 0; attempt++ {
+		until := time.Now().Add(attemptWait(attempt))
+		if until.After(deadline) {
+			until = deadline
+		}
+		ctx, cancel := context.WithDeadline(context.Background(), until)
+		futures := make([]jetstream.PubAckFuture, len(pending))
+		for n, i := range pending {
+			if _, results[i] = c.ensureStream(ctx, items[i].Subject); results[i] != nil {
+				continue
+			}
+			futures[n], results[i] = c.js.PublishAsync(items[i].Subject, items[i].Data, jetstream.WithStallWait(publishTimeout), jetstream.WithMsgID(ids[i]))
+		}
+		var again []int
+		last := !time.Now().Add(noStreamWait).Before(deadline)
+		for n, i := range pending {
+			if futures[n] != nil {
+				select {
+				case <-futures[n].Ok():
+					continue
+				case results[i] = <-futures[n].Err():
+				case <-ctx.Done():
+					results[i] = ctx.Err()
+				}
+			}
+			noStream, unanswered := retryable(results[i])
+			if !(noStream || unanswered) || last {
+				results[i] = publishError(results[i])
+				continue
+			}
+			if noStream {
+				c.forgetStream(StreamName(items[i].Subject))
+			}
+			again = append(again, i)
+		}
+		cancel()
+		if len(again) > 0 {
+			time.Sleep(noStreamWait)
+		}
+		pending = again
 	}
 	return results
 }

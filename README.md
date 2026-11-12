@@ -251,6 +251,8 @@ What isn't cluster-wide yet:
 - `store.maxStorage` and `store.maxMemory` apply to each node.
 - When a node dies, the queue messages its clients held come back after about 30 seconds, not at once.
 
+A send that arrives just as a replicated channel is created or deleted, or while it elects a leader, can go unanswered. The server sends it again by itself, with a message ID so the channel stores it once; the sender only sees a slower send.
+
 A clustered node opens a NATS client port on loopback (a random port, protected by a token that never leaves the process), because the embedded server doesn't start clustering without one.
 
 ### Tracing
