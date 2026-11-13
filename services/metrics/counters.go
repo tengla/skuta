@@ -72,7 +72,7 @@ func toInt64(v string) int64 {
 func toCounters(mf []*Family) *Counters {
 	b := &Counters{}
 	for _, family := range mf {
-		if strings.Contains(family.Name, "kubemq") {
+		if strings.Contains(family.Name, "skuta") {
 			for _, metric := range family.Metrics {
 				switch v := metric.(type) {
 				case Metric:

@@ -18,10 +18,10 @@ type ReceiveOptions struct {
 
 var eventsReceiveExamples = `
 	# Receive messages from an 'events' channel (blocks until next body)
-	kubemq events receive some-channel
+	skuta events receive some-channel
 
 	# Receive messages from an 'events' channel with group (blocks until next body)
-	kubemq events receive some-channel -g G1
+	skuta events receive some-channel -g G1
 
 `
 var eventsReceiveLong = `Events receive (Subscribe) command allows to consume one or many messages from 'events' channel`
@@ -67,7 +67,7 @@ func (o *ReceiveOptions) Validate() error {
 func (o *ReceiveOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

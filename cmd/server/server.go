@@ -28,7 +28,7 @@ func NewCmdServer(ctx context.Context, cfg *config.Config) *cobra.Command {
 
 		Use:     "server",
 		Aliases: []string{"s", "serve"},
-		Short:   "Start kubemq server",
+		Short:   "Start skuta server",
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -55,7 +55,7 @@ func (o *Options) Run(ctx context.Context) error {
 	signal.Notify(gracefulShutdown, syscall.SIGINT)
 	signal.Notify(gracefulShutdown, syscall.SIGQUIT)
 	logger := logging.GetLogFactory().NewLogger("server")
-	logger.Infof("starting kubemq community edition version: %s, cores: %d", o.cfg.GetVersion(), runtime.NumCPU())
+	logger.Infof("starting Skuta version: %s, cores: %d", o.cfg.GetVersion(), runtime.NumCPU())
 	stopTracing, err := tracing.Init(ctx, o.cfg.Tracing, o.cfg.Host, o.cfg.GetVersion())
 	if err != nil {
 		return err
@@ -68,9 +68,9 @@ func (o *Options) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("KubeMQ Web interface is available at http://localhost:%d", o.cfg.Api.Port)
+	logger.Infof("Skuta web interface is available at http://localhost:%d", o.cfg.Api.Port)
 	<-gracefulShutdown
-	logger.Warnw("kubemq server shutdown started")
+	logger.Warnw("skuta server shutdown started")
 	if ifcs != nil {
 		ifcs.Close()
 	}
@@ -82,7 +82,7 @@ func (o *Options) Run(ctx context.Context) error {
 		logger.Warnw("error flushing traces", "error", err.Error())
 	}
 	cancelFlush()
-	logger.Warnw("kubemq server shutdown completed")
+	logger.Warnw("skuta server shutdown completed")
 	logging.Close()
 	return nil
 }

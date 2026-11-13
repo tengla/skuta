@@ -17,19 +17,19 @@ type AttachOptions struct {
 
 var commandsAttachExamples = `
 	# attach to all commands channels and output running messages
-	kubemq commands attach *
+	skuta commands attach *
 	
 	# attach to some-commands 'commands' channel and output running messages
-	kubemq commands attach some-commands
+	skuta commands attach some-commands
 
 	# attach to some-commands1 and some-commands2 'commands' channels and output running messages
-	kubemq commands attach some-commands1 some-commands2 
+	skuta commands attach some-commands1 some-commands2 
 
 	# attach to some-commands 'commands' channel and output running messages filter by include regex (some*)
-	kubemq commands attach some-commands -i some*
+	skuta commands attach some-commands -i some*
 
 	# attach to some-commands 'commands' channel and output running messages filter by exclude regex (not-some*)
-	kubemq commands attach some-commands -e not-some*
+	skuta commands attach some-commands -e not-some*
 `
 var commandsAttachLong = `Command attach command allows to display 'commands' channel content for debugging proposes`
 var commandsAttachShort = `Command attach to 'commands' channels command`

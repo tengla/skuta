@@ -3,7 +3,7 @@
 version: '3'
 
 vars:
-  BINARY_NAME: kubemq
+  BINARY_NAME: skuta
   # The version is the git tag: v2.4.0 on a tagged commit, v2.4.0-3-gabc1234
   # after it, with -dirty for uncommitted changes. To release, run
   # `task release VERSION=v2.5.0`, which creates the tag.
@@ -25,7 +25,7 @@ tasks:
       DEV: true
     cmds:
       - go build -o "{{.BINARY_NAME}}.exe" -ldflags "-X 'main.version={{.VERSION}}'"
-      - kubemq.exe server
+      - skuta.exe server
   web:
     dir: web
     cmds:
@@ -39,7 +39,7 @@ tasks:
       - task: web
       - task: build
   # Runs test/smoke-js against a running server: task smoke -- [host:port]
-  # (default localhost:50000). Set KUBEMQ_TOKEN when authentication is on.
+  # (default localhost:50000). Set SKUTA_TOKEN when authentication is on.
   # When certs/ (from task certs) exists it connects with mTLS using those
   # certificates; TLS=false connects without TLS.
   smoke:
@@ -47,9 +47,9 @@ tasks:
     vars:
       TLS: '{{.TLS | default .LOCAL_CERTS}}'
     env: &tls_env
-      KUBEMQ_TLS_CA: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/ca.pem{{end}}'
-      KUBEMQ_TLS_CERT: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client.pem{{end}}'
-      KUBEMQ_TLS_KEY: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client-key.pem{{end}}'
+      SKUTA_TLS_CA: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/ca.pem{{end}}'
+      SKUTA_TLS_CERT: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client.pem{{end}}'
+      SKUTA_TLS_KEY: '{{if eq .TLS "true"}}{{.ROOT_DIR}}/certs/client-key.pem{{end}}'
     cmds:
       - npm ci
       - node smoke.mjs {{.CLI_ARGS}}
@@ -95,18 +95,18 @@ tasks:
   rundocker:
 
     cmds:
-      - docker run -it --rm -p 8080:8080 -p 50000:50000 -p 9090:9090 kubemq/{{.BINARY_NAME}}-community:{{.VERSION}}
+      - docker run -it --rm -p 8080:8080 -p 50000:50000 -p 9090:9090 tengla/{{.BINARY_NAME}}:{{.VERSION}}
   docker:
     env:
       GOOS: linux
       GOARCH: amd64
     cmds:
-      - docker build --build-arg VERSION={{.VERSION}} . -t kubemq/{{.BINARY_NAME}}-community:{{.VERSION}}
-      - docker tag kubemq/{{.BINARY_NAME}}-community:{{.VERSION}} kubemq/{{.BINARY_NAME}}-community:latest
+      - docker build --build-arg VERSION={{.VERSION}} . -t tengla/{{.BINARY_NAME}}:{{.VERSION}}
+      - docker tag tengla/{{.BINARY_NAME}}:{{.VERSION}} tengla/{{.BINARY_NAME}}:latest
   docker_push:
     cmds:
-      - docker push kubemq/{{.BINARY_NAME}}-community:{{.VERSION}}
-      - docker push kubemq/{{.BINARY_NAME}}-community:latest
+      - docker push tengla/{{.BINARY_NAME}}:{{.VERSION}}
+      - docker push tengla/{{.BINARY_NAME}}:latest
   release:
     cmds:
       - task: tag
@@ -114,10 +114,10 @@ tasks:
       - task: goreleaser
   docker_buildx:
     cmds:
-      - docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION={{.VERSION}} . -t kubemq/{{.BINARY_NAME}}-community:{{.VERSION}} --push
-      - docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION={{.VERSION}} . -t kubemq/{{.BINARY_NAME}}-community:latest --push
-      - docker pull kubemq/{{.BINARY_NAME}}-community:{{.VERSION}}
-      - docker pull kubemq/{{.BINARY_NAME}}-community:latest
+      - docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION={{.VERSION}} . -t tengla/{{.BINARY_NAME}}:{{.VERSION}} --push
+      - docker buildx build --platform linux/amd64,linux/arm64 --build-arg VERSION={{.VERSION}} . -t tengla/{{.BINARY_NAME}}:latest --push
+      - docker pull tengla/{{.BINARY_NAME}}:{{.VERSION}}
+      - docker pull tengla/{{.BINARY_NAME}}:latest
   tag:
     preconditions:
       - sh: echo "{{.VERSION}}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'

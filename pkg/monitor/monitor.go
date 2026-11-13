@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	responseChannelPrefix = "kubemq_reports"
+	responseChannelPrefix = "skuta_reports"
 )
 
 func NewEventsMonitor(ctx context.Context, dataChan chan *Transport,

@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 
 // Dashboard sign-in. When the broker has authentication enabled, the
-// dashboard asks for a JWT (from `kubemq token`). The server keeps it in an
+// dashboard asks for a JWT (from `skuta token`). The server keeps it in an
 // HttpOnly cookie, so this module only tracks whether the session is valid.
 export const session = reactive({
   checked: false,

@@ -22,7 +22,7 @@ import (
 // Browsers share cookies between ports, so the cookie name includes the API
 // port: dashboards of two brokers on one host keep separate sessions.
 func sessionCookieName(apiPort int) string {
-	return fmt.Sprintf("kubemq_session_%d", apiPort)
+	return fmt.Sprintf("skuta_session_%d", apiPort)
 }
 
 type sessionInfo struct {

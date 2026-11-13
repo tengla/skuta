@@ -19,7 +19,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "kubemq",
+	Use: "skuta",
 }
 
 func Execute(version string, args []string) error {

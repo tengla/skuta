@@ -1,5 +1,5 @@
 {
-  "name": "kubemq-ce-web",
+  "name": "skuta-web",
   "private": true,
   "type": "module",
   "scripts": {

@@ -2,7 +2,7 @@
 
 A self-hosted message broker for queues, pub/sub and request/reply, in a single binary with a built-in web dashboard. It speaks gRPC and REST, and runs anywhere from a laptop to a Kubernetes pod.
 
-Skuta is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-community), licensed under Apache-2.0 like upstream. It used to be called kubemq-ce. The binary and the CLI are still named `kubemq`.
+Skuta is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-community), licensed under Apache-2.0 like upstream.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/dashboard-dark.png">
@@ -44,13 +44,13 @@ Then open [http://localhost:8080](http://localhost:8080).
 Requires Go 1.26 or later. The dashboard is committed in `assets/` and embedded in the binary, so Node.js is only needed if you change it.
 
 ```bash
-task build          # or plain `go build -o kubemq .`, which reports the commit as its version
-./kubemq server
+task build          # or plain `go build -o skuta .`, which reports the commit as its version
+./skuta server
 ```
 
 ### Kubernetes
 
-Run the image as a single replica (or three, see [Clustering](#clustering)) and mount a persistent volume at `/kubemq/store` so messages survive pod restarts.
+Run the image as a single replica (or three, see [Clustering](#clustering)) and mount a persistent volume at `/skuta/store` so messages survive pod restarts.
 
 Set the `HOST` environment variable to a fixed name, or use a StatefulSet. The store path includes the host name, which defaults to the pod's. A Deployment's pod gets a new name on each restart, so it would start with an empty store and leave the previous directory on the volume for good.
 
@@ -62,10 +62,10 @@ strategy:
 template:
   spec:
     containers:
-      - name: kubemq
+      - name: skuta
         env:
           - name: HOST
-            value: kubemq
+            value: skuta
 ```
 
 ### Ports
@@ -109,7 +109,7 @@ authentication:
   jwtConfig:
     signatureType: HS256        # HS256/384/512, RS/PS/ES 256/384/512 or EdDSA
     key: "a long random secret" # the HMAC secret, or a PEM public key for the other types
-    # filePath: /run/secrets/kubemq-jwt-key   # instead of key
+    # filePath: /run/secrets/skuta-jwt-key   # instead of key
 ```
 
 or `AUTHENTICATION_ENABLE=true`, `AUTHENTICATION_JWT_CONFIG_SIGNATURE_TYPE=HS256` and `AUTHENTICATION_JWT_CONFIG_KEY=...`. The server writes its effective configuration back to `config.yaml`, so a key given in an environment variable ends up in that file too. Use `filePath` to keep the key out of it.
@@ -117,13 +117,13 @@ or `AUTHENTICATION_ENABLE=true`, `AUTHENTICATION_JWT_CONFIG_SIGNATURE_TYPE=HS256
 Create tokens with the binary, using the same configuration:
 
 ```bash
-./kubemq token --subject orders-service --ttl 720h          # HMAC: signed with the configured secret
-./kubemq token --subject orders-service --signing-key key.pem  # other types: the matching private key
+./skuta token --subject orders-service --ttl 720h          # HMAC: signed with the configured secret
+./skuta token --subject orders-service --signing-key key.pem  # other types: the matching private key
 ```
 
-Without `--ttl` the token never expires. The server checks the signature, the algorithm and, if present, the expiry. The subject names who the token is for: [permissions](#permissions) and the [audit log](#audit-log) use it. `kubemq token` also prints the token's ID to stderr; keep it, so you can [revoke](#revoking-tokens) that one token later.
+Without `--ttl` the token never expires. The server checks the signature, the algorithm and, if present, the expiry. The subject names who the token is for: [permissions](#permissions) and the [audit log](#audit-log) use it. `skuta token` also prints the token's ID to stderr; keep it, so you can [revoke](#revoking-tokens) that one token later.
 
-Clients send the token in the `authorization` gRPC metadata key or the `Authorization` HTTP header, with or without `Bearer `. The SDKs do this when given a token: `credentials` in kubemq-js, `WithAuthToken` in kubemq-go. The `kubemq` CLI uses `client.authToken` from `config.yaml`.
+Clients send the token in the `authorization` gRPC metadata key or the `Authorization` HTTP header, with or without `Bearer `. The SDKs do this when given a token: `credentials` in kubemq-js, `WithAuthToken` in kubemq-go. The `skuta` CLI uses `client.authToken` from `config.yaml`.
 
 With authentication on, gRPC (port 50000) and REST (port 9090) reject other requests with `Unauthenticated` or `401`. Only `Ping` and `GET /ping` are open, for health checks. Use TLS (the `security` section) so tokens aren't sent in clear text.
 
@@ -135,7 +135,7 @@ To cut off a leaked token without changing the key, list its ID in a file:
 
 ```yaml
 authentication:
-  revokedTokensFile: /etc/kubemq/revoked-tokens
+  revokedTokensFile: /etc/skuta/revoked-tokens
 ```
 
 ```text
@@ -160,7 +160,7 @@ authorization:
     - subject: ops
       channels: ["*"]
       actions: ["*"]               # send, receive, manage and admin
-  # filePath: /etc/kubemq/rules.yaml   # instead of policyData
+  # filePath: /etc/skuta/rules.yaml   # instead of policyData
   # autoReload: 10                     # recheck filePath every 10 seconds
 ```
 
@@ -178,7 +178,7 @@ Refused requests get `PermissionDenied` on gRPC and `403` on REST. On a stream, 
 ```yaml
 audit:
   enable: true
-  filePath: /var/log/kubemq/audit.log   # empty: the server log
+  filePath: /var/log/skuta/audit.log   # empty: the server log
 ```
 
 The audit log has one JSON line per request with the time, transport, remote address, subject, token ID, client ID, operation, action, channel type, channel and outcome (`allowed`, `denied` or `unauthenticated`). On a stream, each channel is logged once per stream rather than per message. On the dashboard, sign-ins, actions and opened subscriptions are logged, but not page refreshes. It works without authentication too, without subjects.
@@ -190,18 +190,18 @@ gRPC (port 50000) and REST (port 9090) use TLS when the `security` section has a
 ```yaml
 security:
   cert:
-    filename: /etc/kubemq/server.pem      # or data: with the PEM inline
+    filename: /etc/skuta/server.pem      # or data: with the PEM inline
   key:
-    filename: /etc/kubemq/server-key.pem
+    filename: /etc/skuta/server-key.pem
   ca:
-    filename: /etc/kubemq/clients-ca.pem  # optional: require client certificates
+    filename: /etc/skuta/clients-ca.pem  # optional: require client certificates
 ```
 
 or `SECURITY_CERT_FILENAME`, `SECURITY_KEY_FILENAME` and `SECURITY_CA_FILENAME`. Port 8080 (dashboard, API, MCP) stays plain HTTP; put a proxy that terminates TLS in front of it.
 
 To try it locally, `task certs` creates a CA plus a server certificate for `localhost` and a client certificate signed by it, in `certs/` (ignored by git). Add more server names with `CERTS_HOSTS="DNS:broker.local,IP:192.168.1.10"`.
 
-The `kubemq` CLI connects with TLS when `client.tls` is enabled:
+The `skuta` CLI connects with TLS when `client.tls` is enabled:
 
 ```yaml
 client:
@@ -265,7 +265,7 @@ tracing:
   endpoint: otel-collector:4317   # empty: OTEL_EXPORTER_OTLP_ENDPOINT, or localhost
   protocol: grpc                  # or http, usually port 4318
   insecure: true                  # no TLS to the collector
-  serviceName: kubemq
+  serviceName: skuta
   sampleRatio: 1                  # share of new traces to record, 0 to 1
 ```
 
@@ -293,15 +293,15 @@ The dashboard runs on port 8080, next to the broker.
 
 ## Clients
 
-The `kubemq` binary is also a command-line client:
+The `skuta` binary is also a command-line client:
 
 ```bash
-./kubemq queues send jobs.email '{"to": "someone@example.com"}'
-./kubemq queues receive jobs.email
-./kubemq events receive orders.created
+./skuta queues send jobs.email '{"to": "someone@example.com"}'
+./skuta queues receive jobs.email
+./skuta events receive orders.created
 ```
 
-See the CLI reference for [queues](docs/cli/kubemq_queues.md), [events](docs/cli/kubemq_events.md), [events store](docs/cli/kubemq_events_store.md), [commands](docs/cli/kubemq_commands.md) and [queries](docs/cli/kubemq_queries.md).
+See the CLI reference for [queues](docs/cli/skuta_queues.md), [events](docs/cli/skuta_events.md), [events store](docs/cli/skuta_events_store.md), [commands](docs/cli/skuta_commands.md) and [queries](docs/cli/skuta_queries.md).
 
 Skuta keeps upstream's gRPC and REST API, so the upstream KubeMQ SDKs connect to it: [Go](https://github.com/kubemq-io/kubemq-go), [Java](https://github.com/kubemq-io/kubemq-Java), [Python](https://github.com/kubemq-io/kubemq-Python), [Node](https://github.com/kubemq-io/kubemq-js) and [C#](https://github.com/kubemq-io/kubemq-CSharp). Upstream's [documentation](https://docs.kubemq.io/) explains the messaging patterns. The SDKs' channel management calls (`createChannel`, `listChannels`, `deleteChannel` and their per-type variants) work too, and so does the query cache: a query with a cache key gets the stored response of an earlier query with the same key on the same channel, marked as a cache hit, until its TTL runs out. The SDKs disagree on the TTL's unit, so values under 1000 are read as seconds and larger ones as milliseconds.
 
@@ -322,7 +322,7 @@ The path is `/cloudevents/<events|events_store|queues>/<channel>`. Without a cha
 The dashboard port serves a [Model Context Protocol](https://modelcontextprotocol.io) server at `/mcp` (streamable HTTP). Its tools are `list_channels`, `get_stats`, `send_message` and `peek_queue`. With authentication on, give the agent a token as a Bearer header. With permissions on, each tool needs what the same request from a client would: `send` to send, `receive` to peek, and `manage` for the channels it lists. The agent doesn't need `admin`.
 
 ```bash
-claude mcp add --transport http kubemq http://localhost:8080/mcp --header "Authorization: Bearer $(./kubemq token --subject agent)"
+claude mcp add --transport http skuta http://localhost:8080/mcp --header "Authorization: Bearer $(./skuta token --subject agent)"
 ```
 
 ## Development
@@ -338,13 +338,13 @@ task certs                                           # a local CA, server and cl
 
 The dashboard dev server proxies API calls to a broker on `http://localhost:8080`. Set `BROKER_URL` to use another one. Run `task web` and commit `assets/` after changing the dashboard, since `go build` embeds whatever is there.
 
-`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `KUBEMQ_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `KUBEMQ_TLS_CA`, `KUBEMQ_TLS_CERT` and `KUBEMQ_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
+`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `SKUTA_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `SKUTA_TLS_CA`, `SKUTA_TLS_CERT` and `SKUTA_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
 
 `task bench` runs [`test/bench`](test/bench/main.go), which measures every messaging pattern over gRPC against a server you started, so it works with any build. Each scenario runs three times and prints medians, and anything sent but never received is reported as lost. It writes to fresh `bench.<id>.*` channels and deletes them after each run. It stores up to 1 GiB per scenario (`-budget`), so give it a server you don't mind loading.
 
 ```bash
-kubemq server                                                     # with the build to measure, on a fresh store
-go run ./test/bench -label new -pid $(pgrep -x kubemq) -out new.json
+skuta server                                                     # with the build to measure, on a fresh store
+go run ./test/bench -label new -pid $(pgrep -x skuta) -out new.json
 go run ./test/bench compare old.json new.json                     # marks changes within the spread of the runs as noise
 go run ./test/bench -list                                         # the scenarios; -run takes a regular expression
 ```

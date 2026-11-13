@@ -98,4 +98,4 @@ tracing:
   insecure: false
   protocol: grpc
   sampleRatio: 1
-  serviceName: kubemq
+  serviceName: skuta

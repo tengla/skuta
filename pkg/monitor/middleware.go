@@ -17,7 +17,7 @@ import (
 	"github.com/tengla/skuta/pkg/client"
 )
 
-const middlewareCommChannel = "kubemq_monitor"
+const middlewareCommChannel = "skuta_monitor"
 
 type MiddlewareMessage struct {
 	Kind             string `json:"kind"`

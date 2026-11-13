@@ -34,7 +34,7 @@ func defaultTracingConfig() *TracingConfig {
 		Endpoint:    "",
 		Protocol:    "grpc",
 		Insecure:    false,
-		ServiceName: "kubemq",
+		ServiceName: "skuta",
 		SampleRatio: 1,
 	}
 }

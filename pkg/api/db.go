@@ -24,7 +24,7 @@ func (d *DB) Init(path string) error {
 			return err
 		}
 	}
-	db, err := bolt.Open(path+"/kubemq.db", 0755, &bolt.Options{Timeout: 1 * time.Second})
+	db, err := bolt.Open(path+"/skuta.db", 0755, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return err
 	}

@@ -20,10 +20,10 @@ type AckOptions struct {
 
 var queueAckExamples = `
 	# Ack all messages in a 'queues' channel 'some-channel' with 2 seconds of wait to complete operation
-	kubemq queue ack some-channel
+	skuta queue ack some-channel
 	
 	# Ack all messages in a 'queues' channel 'some-long-queue' with 30 seconds of wait to complete operation
-	kubemq queue ack some-long-queue -w 30
+	skuta queue ack some-long-queue -w 30
 `
 var queueAckLong = `Queues ack command allows to clear / remove / ack all messages in a 'queues' channel`
 var queueAckShort = `Queues ack all messages in a 'queues' channel`
@@ -68,7 +68,7 @@ func (o *AckOptions) Validate() error {
 func (o *AckOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

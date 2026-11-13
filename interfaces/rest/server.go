@@ -69,7 +69,7 @@ func NewServer(svc *services.SystemServices, appConfigs ...*config.Config) (*Ser
 		isTLS:         false,
 		acceptTraffic: atomic.NewBool(false),
 	}
-	kubeversion = fmt.Sprintf("KubeMQ %s", appConfig.GetVersion())
+	kubeversion = fmt.Sprintf("Skuta %s", appConfig.GetVersion())
 	g, err := guard.New(appConfig)
 	if err != nil {
 		return nil, err

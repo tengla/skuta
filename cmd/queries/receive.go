@@ -21,10 +21,10 @@ type ReceiveOptions struct {
 
 var queriesReceiveExamples = `
 	# Receive 'queries'  from a 'queries' channel (blocks until next body)
-	kubemq queries receive some-channel
+	skuta queries receive some-channel
 
 	# Receive 'queries' from a 'queries' channel with group(blocks until next body)
-	kubemq queries receive some-channel -g G1
+	skuta queries receive some-channel -g G1
 `
 var queriesReceiveLong = `Queries receive (Subscribe) command allows to receive a body from a 'queries' channel and response with appropriate reply`
 var queriesReceiveShort = `Queries receive a body from a 'queries' channel`
@@ -69,7 +69,7 @@ func (o *ReceiveOptions) Validate() error {
 func (o *ReceiveOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

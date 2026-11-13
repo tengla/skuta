@@ -60,9 +60,9 @@ func TestSendThenDeliver(t *testing.T) {
 	for _, a := range send.Attributes() {
 		attrs[string(a.Key)] = a.Value.String()
 	}
-	require.Equal(t, "kubemq", attrs["messaging.system"])
+	require.Equal(t, "skuta", attrs["messaging.system"])
 	require.Equal(t, "orders", attrs["messaging.destination.name"])
-	require.Equal(t, "queues", attrs["messaging.kubemq.pattern"])
+	require.Equal(t, "queues", attrs["messaging.skuta.pattern"])
 	require.Equal(t, "m1", attrs["messaging.message.id"])
 	require.Equal(t, "shop", attrs["messaging.client.id"])
 	require.Equal(t, "5", attrs["messaging.message.body.size"])
