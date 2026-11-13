@@ -78,7 +78,7 @@ func Init(ctx context.Context, cfg *config.TracingConfig, host, version string) 
 	}
 	serviceName := cfg.ServiceName
 	if serviceName == "" {
-		serviceName = "kubemq"
+		serviceName = "skuta"
 	}
 	res, err := resource.New(ctx,
 		resource.WithFromEnv(),
@@ -135,11 +135,11 @@ type Message struct {
 
 func (m Message) attributes(operation string) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
-		attribute.String("messaging.system", "kubemq"),
+		attribute.String("messaging.system", "skuta"),
 		attribute.String("messaging.operation.name", operation),
 		attribute.String("messaging.operation.type", operation),
 		attribute.String("messaging.destination.name", m.Channel),
-		attribute.String("messaging.kubemq.pattern", m.Pattern),
+		attribute.String("messaging.skuta.pattern", m.Pattern),
 		attribute.Int("messaging.message.body.size", m.BodySize),
 	}
 	if m.ID != "" {

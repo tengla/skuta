@@ -140,7 +140,7 @@ func TestDashboardAuth_LoginLogout(t *testing.T) {
 	cookies := rec.Result().Cookies()
 	require.Len(t, cookies, 1)
 	cookie := cookies[0]
-	require.Equal(t, "kubemq_session_8080", cookie.Name)
+	require.Equal(t, "skuta_session_8080", cookie.Name)
 	require.Equal(t, token, cookie.Value, "the Bearer prefix is not stored")
 	require.True(t, cookie.HttpOnly)
 	require.Equal(t, http.SameSiteStrictMode, cookie.SameSite)
@@ -155,7 +155,7 @@ func TestDashboardAuth_LoginLogout(t *testing.T) {
 	require.Equal(t, sessionInfo{Enabled: true}, sessionOf(t, rec))
 	cleared := rec.Result().Cookies()
 	require.Len(t, cleared, 1)
-	require.Equal(t, "kubemq_session_8080", cleared[0].Name)
+	require.Equal(t, "skuta_session_8080", cleared[0].Name)
 	require.Empty(t, cleared[0].Value)
 	require.Less(t, cleared[0].MaxAge, 0)
 }

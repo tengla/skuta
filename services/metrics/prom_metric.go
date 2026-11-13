@@ -10,7 +10,7 @@ type promGaugeMetric struct {
 
 func newPromGaugeMetric(subsystem, name, help string, labels ...string) *promGaugeMetric {
 	opts := prometheus.GaugeOpts{
-		Namespace:   "kubemq",
+		Namespace:   "skuta",
 		Subsystem:   subsystem,
 		Name:        name,
 		Help:        help,
@@ -35,7 +35,7 @@ type promCounterMetric struct {
 
 func newPromCounterMetric(subsystem, name, help string, labels ...string) *promCounterMetric {
 	opts := prometheus.CounterOpts{
-		Namespace:   "kubemq",
+		Namespace:   "skuta",
 		Subsystem:   subsystem,
 		Name:        name,
 		Help:        help,

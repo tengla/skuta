@@ -17,19 +17,19 @@ type AttachOptions struct {
 
 var eventsAttachExamples = `
 	# Attach to all events store channels and output running messages
-	kubemq events_store attach *
+	skuta events_store attach *
 	
 	# Attach to some-events-store 'events store' channel and output running messages
-	kubemq events_store attach some-events-store
+	skuta events_store attach some-events-store
 
 	# Attach to some-events-store1 and some-events-store2 'events store' channels and output running messages
-	kubemq events_store attach some-events-store1 some-events-store2 
+	skuta events_store attach some-events-store1 some-events-store2 
 
 	# Attach to some-events-store 'events store' channel and output running messages filter by include regex (some*)
-	kubemq events_store attach some-events -i some*
+	skuta events_store attach some-events -i some*
 
 	# Attach to some-events-store 'events store' channel and output running messages filter by exclude regex (not-some*)
-	kubemq events_store attach some-events -e not-some*
+	skuta events_store attach some-events -e not-some*
 `
 var eventsAttachLong = `Events-Store attach command allows to display 'events_store' channel content for debugging proposes`
 var eventsAttachShort = `Events-Store attach to events store channels command`

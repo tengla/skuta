@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	sdk "github.com/kubemq-io/kubemq-go"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -70,11 +69,8 @@ func TestGRPCServer_Authentication(t *testing.T) {
 		_, err = stream.Recv()
 		require.Equal(t, codes.Unauthenticated, status.Code(err))
 	})
-	t.Run("go sdk with token", func(t *testing.T) {
-		c, err := sdk.NewClient(ctx, sdk.WithAddress("localhost", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC), sdk.WithAuthToken(token))
-		require.NoError(t, err)
-		defer func() { _ = c.Close() }()
-		res, err := c.SetQueueMessage(c.NewQueueMessage().SetChannel("auth.queue").SetBody([]byte("job"))).Send(ctx)
+	t.Run("queue with token", func(t *testing.T) {
+		res, err := client.SendQueueMessage(withToken(token), &pb.QueueMessage{MessageID: nuid.Next(), ClientID: "auth-test", Channel: "auth.queue", Body: []byte("job")})
 		require.NoError(t, err)
 		require.False(t, res.IsError, res.Error)
 	})

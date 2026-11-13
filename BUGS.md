@@ -2,7 +2,7 @@
 
 ## Oversized messages fail silently
 
-Found 2026-11-02 by sending increasing body sizes to a real server with `kubemq-js`, using default config (`Broker.MaxPayload` and `Grpc.BodyLimit` at 100 MiB).
+Found 2026-11-02 by sending increasing body sizes to a real server with the Node SDK, using default config (`Broker.MaxPayload` and `Grpc.BodyLimit` at 100 MiB).
 
 | Type | Largest body that worked | Smallest that failed | Result when too big |
 |---|---|---|---|

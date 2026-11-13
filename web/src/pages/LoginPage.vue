@@ -46,7 +46,7 @@ async function submit() {
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <button type="submit" class="btn btn-primary" :disabled="busy"><Icon name="lock" />{{ busy ? 'Signing in…' : 'Sign in' }}</button>
       <p class="muted hint">
-        Create one on the server with <code>kubemq token --subject &lt;name&gt; --ttl 12h</code>. You stay signed in until the token expires or
+        Create one on the server with <code>skuta token --subject &lt;name&gt; --ttl 12h</code>. You stay signed in until the token expires or
         you sign out.
       </p>
     </form>

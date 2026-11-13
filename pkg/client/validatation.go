@@ -1,8 +1,8 @@
 package client
 
 import (
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pb"
 	"strings"
 )
 

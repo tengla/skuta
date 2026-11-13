@@ -18,19 +18,19 @@ type AttachOptions struct {
 
 var queueAttachExamples = `
 	# Attach to all active 'queues' channels and output running messages
-	kubemq queue attach all
+	skuta queue attach all
 	
 	# Attach to some-queue queue channel and output running messages
-	kubemq queue attach some-queue
+	skuta queue attach some-queue
 
 	# Attach to some-queue1 and some-queue2 queue channels and output running messages
-	kubemq queue attach some-queue1 some-queue2 
+	skuta queue attach some-queue1 some-queue2 
 
 	# Attach to some-queue queue channel and output running messages filter by include regex (some*)
-	kubemq queue attach some-queue -i some*
+	skuta queue attach some-queue -i some*
 
 	# Attach to some-queue queue channel and output running messages filter by exclude regex (not-some*)
-	kubemq queue attach some-queue -e not-some*
+	skuta queue attach some-queue -e not-some*
 `
 var queueAttachLong = `Queues attach command allows to display 'queues' channel content for debugging proposes`
 var queueAttachShort = `Queues attach to 'queues' channels command`

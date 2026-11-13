@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -30,10 +30,10 @@ type ReceiveOptions struct {
 
 var eventsReceiveExamples = `
 	# Receive messages from an 'events store' channel (blocks until next body)
-	kubemq events_store receive some-channel
+	skuta events_store receive some-channel
 
 	# Receive messages from an 'events channel' with group(blocks until next body)
-	kubemq events_store receive some-channel -g G1
+	skuta events_store receive some-channel -g G1
 `
 var eventsReceiveLong = `Events-Store receive (Subscribe) command allows to consume messages from an 'events store' with options to set offset parameters`
 var eventsReceiveShort = `Events-Store receive a messages from an 'events store'`
@@ -122,7 +122,7 @@ func (o *ReceiveOptions) Validate() error {
 func (o *ReceiveOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

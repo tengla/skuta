@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
+	"github.com/tengla/skuta/pkg/utils"
 	"go.uber.org/atomic"
 
 	"github.com/tengla/skuta/services"
@@ -69,7 +70,7 @@ func NewServer(svc *services.SystemServices, appConfigs ...*config.Config) (*Ser
 		isTLS:         false,
 		acceptTraffic: atomic.NewBool(false),
 	}
-	kubeversion = fmt.Sprintf("KubeMQ %s", appConfig.GetVersion())
+	kubeversion = fmt.Sprintf("Skuta %s", appConfig.GetVersion())
 	g, err := guard.New(appConfig)
 	if err != nil {
 		return nil, err
@@ -78,6 +79,10 @@ func NewServer(svc *services.SystemServices, appConfigs ...*config.Config) (*Ser
 
 	e := echo.New()
 	s.echoWebServer = e
+	e.IPExtractor, err = utils.RemoteIPExtractor(appConfig.Rest.TrustedProxies)
+	if err != nil {
+		return nil, err
+	}
 	e.Logger = logging.GetLogFactory().NewEchoLogger("rest-api")
 	e.HideBanner = true
 	e.Use(middleware.Recover())

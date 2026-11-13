@@ -19,7 +19,7 @@ func NewInternalClient() *InternalClient {
 	return &InternalClient{
 		arrayService:    nil,
 		isAcceptTraffic: atomic.NewBool(false),
-		clientID:        "kubemq-web-client",
+		clientID:        "skuta-web-client",
 	}
 }
 

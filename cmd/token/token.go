@@ -21,10 +21,10 @@ type Options struct {
 
 var tokenExamples = `
 	# token signed with the HMAC secret in authentication.jwtConfig, valid for 30 days
-	kubemq token --subject orders-service --ttl 720h
+	skuta token --subject orders-service --ttl 720h
 
 	# RS/PS/ES/EdDSA: sign with the private key matching the configured public key
-	kubemq token --subject orders-service --signing-key ./jwt-private.pem
+	skuta token --subject orders-service --signing-key ./jwt-private.pem
 `
 
 func NewCmdToken(ctx context.Context, cfg *config.Config) *cobra.Command {

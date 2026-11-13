@@ -1,12 +1,12 @@
 // Command bench measures a running server over gRPC. It starts nothing itself,
 // so the same tool can measure any build:
 //
-//	kubemq server
-//	go run ./test/bench -addr localhost:50000 -label new -pid $(pgrep -x kubemq) -out new.json
+//	skuta server
+//	go run ./test/bench -addr localhost:50000 -label new -pid $(pgrep -x skuta) -out new.json
 //	go run ./test/bench compare old.json new.json
 //
-// For a server with TLS, set KUBEMQ_TLS_CA, and for mTLS also KUBEMQ_TLS_CERT
-// and KUBEMQ_TLS_KEY (see transportCredentials).
+// For a server with TLS, set SKUTA_TLS_CA, and for mTLS also SKUTA_TLS_CERT
+// and SKUTA_TLS_KEY (see transportCredentials).
 package main
 
 import (
@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -165,13 +165,13 @@ func fatal(message string) {
 	os.Exit(1)
 }
 
-// transportCredentials uses TLS when KUBEMQ_TLS_CA, KUBEMQ_TLS_CERT or
-// KUBEMQ_TLS_KEY is set: the CA file to trust (empty: the system's CAs), and
+// transportCredentials uses TLS when SKUTA_TLS_CA, SKUTA_TLS_CERT or
+// SKUTA_TLS_KEY is set: the CA file to trust (empty: the system's CAs), and
 // the client certificate and key a server in mTLS mode requires. They are
 // environment variables rather than flags so that `compare` stays the first
 // argument when a task passes them.
 func transportCredentials() (credentials.TransportCredentials, error) {
-	ca, cert, key := os.Getenv("KUBEMQ_TLS_CA"), os.Getenv("KUBEMQ_TLS_CERT"), os.Getenv("KUBEMQ_TLS_KEY")
+	ca, cert, key := os.Getenv("SKUTA_TLS_CA"), os.Getenv("SKUTA_TLS_CERT"), os.Getenv("SKUTA_TLS_KEY")
 	if ca == "" && cert == "" && key == "" {
 		return insecure.NewCredentials(), nil
 	}
@@ -183,11 +183,11 @@ func transportCredentials() (credentials.TransportCredentials, error) {
 		}
 		cfg.RootCAs = x509.NewCertPool()
 		if !cfg.RootCAs.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("KUBEMQ_TLS_CA: no PEM certificates in %s", ca)
+			return nil, fmt.Errorf("SKUTA_TLS_CA: no PEM certificates in %s", ca)
 		}
 	}
 	if (cert == "") != (key == "") {
-		return nil, fmt.Errorf("set KUBEMQ_TLS_CERT and KUBEMQ_TLS_KEY together")
+		return nil, fmt.Errorf("set SKUTA_TLS_CERT and SKUTA_TLS_KEY together")
 	}
 	if cert != "" {
 		pair, err := tls.LoadX509KeyPair(cert, key)

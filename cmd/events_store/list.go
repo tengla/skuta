@@ -20,10 +20,10 @@ type ListOptions struct {
 
 var eventsStoreListExamples = `
 	# Get a list of events store channels
-	kubemq events_store list
+	skuta events_store list
 	
 	# Get a list of events stores channels/ clients filtered by 'some-events-store' channel only
-	kubemq events_store list -f some-events-store
+	skuta events_store list -f some-events-store
 `
 var eventsStoreListLong = `Events-Store list command allows to get a list of 'events store' channels`
 var eventsStoreListShort = `Events-Store list of 'events store' channels`

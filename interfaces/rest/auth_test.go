@@ -14,7 +14,6 @@ import (
 
 	"github.com/fortytw2/leaktest"
 	"github.com/gorilla/websocket"
-	sdk "github.com/kubemq-io/kubemq-go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
@@ -63,15 +62,14 @@ func TestRestServer_Authentication(t *testing.T) {
 	require.NotNil(t, res)
 	require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 
-	// The Go SDK's REST transport sends "Bearer <token>".
-	client, err := sdk.NewClient(ctx, sdk.WithUri(base), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest), sdk.WithAuthToken(token))
-	require.NoError(t, err)
-	defer func() { _ = client.Close() }()
+	// Queue calls carry the token as the SDKs' REST transport does.
+	client := newQueueClient(port, "")
+	client.token = token
 	channel := nuid.Next()
-	sent, err := client.QM().SetChannel(channel).SetBody([]byte("job")).Send(ctx)
+	sent, err := client.send(client.message(channel, []byte("job")))
 	require.NoError(t, err)
 	require.False(t, sent.IsError, sent.Error)
-	received, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(2).Send(ctx)
+	received, err := client.receive(channel, 1, 2, false)
 	require.NoError(t, err)
 	require.Len(t, received.Messages, 1)
 }

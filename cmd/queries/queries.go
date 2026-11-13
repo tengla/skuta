@@ -9,17 +9,17 @@ import (
 
 var queriesExamples = `
 	# Execute send 'queries'  command
-	kubemq queries send
+	skuta queries send
 
 	# Execute receive 'queries'  command
-	kubemq queries receive 
+	skuta queries receive 
 
 	# Execute attach to 'queries' command
-	kubemq queries attach query
+	skuta queries attach query
 
 `
-var queriesLong = `Execute Kubemq 'queries' `
-var queriesShort = `Execute Kubemq 'queries'`
+var queriesLong = `Execute Skuta 'queries' `
+var queriesShort = `Execute Skuta 'queries'`
 
 func NewCmdQueries(ctx context.Context, cfg *config.Config) *cobra.Command {
 

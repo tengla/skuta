@@ -23,7 +23,7 @@ import (
 func getHostname() string {
 	hostname, _ := os.Hostname()
 	if strings.Contains("0123456789", hostname[:1]) {
-		hostname = "kubemq-" + hostname
+		hostname = "skuta-" + hostname
 	}
 	return hostname
 }

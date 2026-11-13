@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/services/array"
 	"github.com/tengla/skuta/services/broker"
 	"io/fs"
@@ -91,6 +92,11 @@ func CreateApiServer(ctx context.Context, broker *broker.Service, appConfigs ...
 	s.context, s.cancelFunc = context.WithCancel(ctx)
 	e := echo.New()
 	e.HideBanner = true
+	ipExtractor, err := utils.RemoteIPExtractor(appConfig.Api.TrustedProxies)
+	if err != nil {
+		return nil, err
+	}
+	e.IPExtractor = ipExtractor
 	e.Logger = logging.GetLogFactory().NewEchoLogger("server-api")
 	e.Use(middleware.Recover())
 	e.Use(loggingMiddleware(s.logger))

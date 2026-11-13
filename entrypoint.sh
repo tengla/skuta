@@ -1,1 +1,1 @@
-exec run-kubemq
+exec run-skuta

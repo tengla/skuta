@@ -3,8 +3,8 @@ package metrics
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/pb"
 	"os"
 	"testing"
 	"time"

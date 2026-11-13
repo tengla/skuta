@@ -9,17 +9,17 @@ import (
 
 var eventsExamples = `
 	# Execute send 'events' command
- 	kubemq events send
+ 	skuta events send
 
 	# Execute receive 'events' command
-	kubemq events receive
+	skuta events receive
 
 	# Execute attach to an 'events' command
-	kubemq events attach
+	skuta events attach
 
 `
-var eventsLong = `Execute Kubemq 'events' Pub/Sub commands`
-var eventsShort = `Execute Kubemq 'events' Pub/Sub commands`
+var eventsLong = `Execute Skuta 'events' Pub/Sub commands`
+var eventsShort = `Execute Skuta 'events' Pub/Sub commands`
 
 func NewCmdEvents(ctx context.Context, cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{

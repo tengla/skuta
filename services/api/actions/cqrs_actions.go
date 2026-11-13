@@ -3,8 +3,8 @@ package actions
 import (
 	"context"
 	"encoding/json"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/pkg/api/actions"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/services/metrics"
 	"time"
 )

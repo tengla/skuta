@@ -43,12 +43,12 @@ func parseFamily(mf []*Family) (*api.System, []*Stats) {
 		case "go_threads":
 			si.SetOSThreads(getInt64Value(family.Metrics))
 		default:
-			if strings.Contains(family.Name, "kubemq") {
+			if strings.Contains(family.Name, "skuta") {
 				for _, metric := range family.Metrics {
 					switch v := metric.(type) {
 					case Metric:
 						st := &Stats{
-							Name:     strings.Replace(family.Name, "kubemq_", "", -1),
+							Name:     strings.Replace(family.Name, "skuta_", "", -1),
 							Node:     v.Labels["node"],
 							Type:     v.Labels["type"],
 							Side:     v.Labels["side"],

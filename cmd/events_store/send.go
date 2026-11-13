@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 )
@@ -22,16 +22,16 @@ type SendOptions struct {
 
 var eventsSendExamples = `
 	# Send (Publish) body to an 'events store' channel
-	kubemq events_store send some-channel some-body
+	skuta events_store send some-channel some-body
 	
 	# Send (Publish) body to an 'events store' channel with metadata
-	kubemq events_store send some-channel some-body --metadata some-metadata
+	skuta events_store send some-channel some-body --metadata some-metadata
 
 	# Send 10 messages to an 'events store' channel
-	kubemq events_store send some-channel some-body -m 10
+	skuta events_store send some-channel some-body -m 10
 
 	# Send 100 messages to an 'events store' channel in stream mode
-	kubemq events_store send some-channel some-body -m 100 -s
+	skuta events_store send some-channel some-body -m 100 -s
 `
 var eventsSendLong = `Events-Store send command allows to send (publish) one or many messages to an 'events store' channel`
 var eventsSendShort = `Events-Store send messages to an 'events store' channel command`
@@ -82,7 +82,7 @@ func (o *SendOptions) Validate() error {
 func (o *SendOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

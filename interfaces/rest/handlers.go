@@ -17,7 +17,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"

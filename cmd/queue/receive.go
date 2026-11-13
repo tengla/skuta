@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 )
@@ -22,13 +22,13 @@ type ReceiveOptions struct {
 
 var queueReceiveExamples = `
 	# Receive 1 messages from a queue channel q1 and wait for 2 seconds (default)
-	kubemq queue receive q1
+	skuta queue receive q1
 
 	# Receive 3 messages from a queue channel and wait for 5 seconds
-	kubemq queue receive q1 -m 3 -t 5
+	skuta queue receive q1 -m 3 -t 5
 
 	# Watching 'queues' channel messages
-	kubemq queue receive q1 -w
+	skuta queue receive q1 -w
 `
 var queueReceiveLong = `Queues receive command allows to receive one or many messages from a queue channel`
 var queueReceiveShort = `Queues receive a messages from a queue channel command`
@@ -80,7 +80,7 @@ func (o *ReceiveOptions) Run(ctx context.Context) error {
 	}
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

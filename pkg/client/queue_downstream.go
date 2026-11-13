@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/pkg/jstore"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/uuid"
 	"github.com/tengla/skuta/services/metrics"
 	"go.uber.org/atomic"

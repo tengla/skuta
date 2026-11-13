@@ -3,8 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 	"time"
@@ -23,13 +23,13 @@ type SendOptions struct {
 
 var queriesSendExamples = `
 	# Send query to a 'queries' channel
-	kubemq queries send some-channel some-query
+	skuta queries send some-channel some-query
 	
 	# Send query to a 'queries' channel with metadata
-	kubemq queries send some-channel some-body -m some-metadata
+	skuta queries send some-channel some-body -m some-metadata
 	
 	# Send query to a 'queries' channel with 120 seconds timeout
-	kubemq queries send some-channel some-body -o 120
+	skuta queries send some-channel some-body -o 120
 	
 `
 var queriesSendLong = `Queries send command allow to send messages to 'queries' channel with an option to set query time-out and caching parameters`
@@ -81,7 +81,7 @@ func (o *SendOptions) Validate() error {
 func (o *SendOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

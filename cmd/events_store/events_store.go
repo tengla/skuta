@@ -9,19 +9,19 @@ import (
 
 var eventsExamples = `
 	# Execute send 'events store' command 
-	kubemq events_store send
+	skuta events_store send
 
 	# Execute receive 'events store' command
-	kubemq events_store receive
+	skuta events_store receive
 
 	# Execute attach to 'events store' command
-	 kubemq events_store attach
+	 skuta events_store attach
 
 	# Execute list of 'events store' channels command
- 	kubemq events_store list
+ 	skuta events_store list
 `
-var eventsLong = `Execute Kubemq 'Events-Store' Pub/Sub commands`
-var eventsShort = `Execute Kubemq 'Events-Store' Pub/Sub commands`
+var eventsLong = `Execute Skuta 'Events-Store' Pub/Sub commands`
+var eventsShort = `Execute Skuta 'Events-Store' Pub/Sub commands`
 
 func NewCmdEventsStore(ctx context.Context, cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{

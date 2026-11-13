@@ -1,10 +1,10 @@
 # TODO
 
-The [roadmap](#roadmap) at the end is the plan for making kubemq-ce a production-grade broker. The sections before it list features that would bring it closer to KubeMQ v3, ranked by value for effort.
+The [roadmap](#roadmap) at the end is the plan for making Skuta a production-grade broker. The sections before it list features that would bring it closer to upstream's version 3, ranked by value for effort.
 
 ## Quick wins (days each)
 
-- [x] **Channel management for SDKs** (1–2 days). Answer the queries the SDKs send to `kubemq.cluster.internal.requests`, so kubemq-js `createChannel`, `listChannels` and `deleteChannel` work. Listing can reuse the snapshot data. Delete is new, and the dashboard could use it too. Done when the three `XFAIL`s in `task smoke` pass. First step: read the request and response format kubemq-js expects.
+- [x] **Channel management for SDKs** (1–2 days). Answer the queries the SDKs send to `kubemq.cluster.internal.requests`, so the Node SDK's `createChannel`, `listChannels` and `deleteChannel` work. Listing can reuse the snapshot data. Delete is new, and the dashboard could use it too. Done when the three `XFAIL`s in `task smoke` pass. First step: read the request and response format the Node SDK expects.
 - [x] **Per-channel permissions** (3–5 days). Every valid token can do everything today. Use the token's `sub` and the unused `authorization` config section for rules like "orders-service may send to `orders.*`". The upstream design was Casbin; simple rules in config would be easier to run. v3: role-based access control.
 - [x] **Revocable API keys and an audit log** (1–2 days). Give tokens an ID (`jti`) and keep a revocation list, so a leaked token can be cut off without changing the key. Log who did what at the existing gRPC and REST interceptors. v3: API keys, audit logging.
 - [x] **CloudEvents endpoint** (1–2 days). A REST endpoint that accepts CloudEvents and maps them onto events and queues, so anything that can POST JSON can publish. v3: CloudEvents, on by default.
@@ -17,7 +17,7 @@ The [roadmap](#roadmap) at the end is the plan for making kubemq-ce a production
 
 ## The big one
 
-- [x] **Replace the `kubemq-io/broker` fork with `nats-server` and `nats.go`, storage on JetStream**. The fork bundled NATS 2.1.9 (about 2020) and NATS Streaming, which is deprecated with no maintained version, so security fixes no longer came from upstream. This is a maintenance job first; replication and clustering stay optional. See roadmap step 4.
+- [x] **Replace upstream's fork of NATS with `nats-server` and `nats.go`, storage on JetStream**. The fork bundled NATS 2.1.9 (about 2020) and NATS Streaming, which is deprecated with no maintained version, so security fixes no longer came from upstream. This is a maintenance job first; replication and clustering stay optional. See roadmap step 4.
 
 ## Not planned
 
@@ -34,18 +34,18 @@ What it takes to go from a well-run fork to a broker people can run in productio
 
 ### 0. Positioning
 
-kubemq-ce is the KubeMQ-compatible broker without the enterprise licence: the same SDKs, API and messaging patterns, fully open source under Apache-2.0, in one binary with no telemetry. KubeMQ's enterprise edition is priced for large companies, which leaves out the teams that would otherwise use it.
+Skuta is the KubeMQ-compatible broker without the enterprise licence: the same SDKs, API and messaging patterns, fully open source under Apache-2.0, in one binary with no telemetry. Upstream's enterprise edition is priced for large companies, which leaves out the teams that would otherwise use it.
 
 Who it's for, in order:
 
-1. **Teams already on KubeMQ.** Their producers and consumers are written against the KubeMQ SDKs. Moving to RabbitMQ or Kafka means rewriting them; moving to kubemq-ce means changing an address. This is the strongest case, so compatibility with the upstream SDKs is the product.
-2. **New projects that want a simple broker.** Five clear patterns, request/reply built in, a dashboard, and one binary to run. Be honest in the README that NATS, RabbitMQ and Redpanda are free and mature alternatives too; kubemq-ce competes on simplicity there, not on price.
+1. **Teams already on KubeMQ.** Their producers and consumers are written against its SDKs. Moving to RabbitMQ or Kafka means rewriting them; moving to Skuta means changing an address. This is the strongest case, so compatibility with the upstream SDKs is the product.
+2. **New projects that want a simple broker.** Five clear patterns, request/reply built in, a dashboard, and one binary to run. Be honest in the README that NATS, RabbitMQ and Redpanda are free and mature alternatives too; Skuta competes on simplicity there, not on price.
 
 The enterprise features such teams would pay for are mostly done: access control, audit logging, revocable API keys, OpenTelemetry, CloudEvents and MCP. The big remaining gap is clustering and high availability, which the move to JetStream makes possible (step 4).
 
 - [ ] **Put this at the top of the README.** Lead with compatibility and the open licence, and keep the comparison with upstream factual.
-- [ ] **Settle the name before publishing images or announcing anything.** "KubeMQ" is likely a trademark of KubeMQ Ltd, and the Apache-2.0 licence covers the code, not the name. A distinct name with "compatible with KubeMQ" in the description is the safer path for a project others adopt. Check whether "kubemq-ce" is acceptable, or pick a new name and keep the module path change in mind. Skuta is chosen (see "Chosen name: Skuta" below); the trademark check and the rename are still open.
-- [ ] **Treat SDK compatibility as the main promise.** The SDK smoke tests in step 1 should cover the Go, Python, Java and .NET SDKs, not just kubemq-js, and a compatibility table in the README should say which SDK versions are tested.
+- [ ] **Settle the name before publishing images or announcing anything.** "KubeMQ" is likely a trademark of KubeMQ Ltd, and the Apache-2.0 licence covers the code, not the name. A distinct name with "compatible with KubeMQ" in the description is the safer path for a project others adopt. Skuta is chosen (see "Chosen name: Skuta" below); the rename is done (binary, CLI, image, metrics and on-disk names), and the trademark check is still open.
+- [ ] **Treat SDK compatibility as the main promise.** The SDK smoke tests in step 1 should cover the Go, Python, Java and .NET SDKs, not just the Node one, and a compatibility table in the README should say which SDK versions are tested.
 
 ### 1. CI and a reliable test suite
 
@@ -53,7 +53,7 @@ The enterprise features such teams would pay for are mostly done: access control
 - [ ] **Make the suite faster.** It takes about 13 minutes, mostly in `pkg/client` (6 min) and `interfaces/grpc` (4 min). Look for fixed sleeps and per-test broker startups that can be shared.
 - [ ] **Make the tests pass under `-race`.** The stream tests in `pkg/client` fail there, as they did before the move to JetStream, because they log after the test has ended. `TestRestServer_CloudEvents` also failed once with connection refused, cause unknown.
 - [ ] **Run CI on every pull request:** `go vet`, golangci-lint, the Go tests, the dashboard build (check that `assets/` matches `web/`) and `task smoke` against a freshly built server.
-- [ ] **Check more SDKs.** Add smoke tests for kubemq-go, kubemq-Python, kubemq-Java and kubemq-CSharp next to the kubemq-js one, and run them all in CI (see step 0).
+- [ ] **Check more SDKs.** Add smoke tests for the Python, Java and C# SDKs next to the Node and Go ones (`task smoke`, `task smoke-go`), and run them all in CI (see step 0).
 
 ### 2. Releases
 
@@ -66,14 +66,14 @@ The enterprise features such teams would pay for are mostly done: access control
 
 ### 4. Replace the broker fork with maintained NATS
 
-The `kubemq-io/broker` fork held the NATS server (`server/gnatsd`, version 2.1.9 from about 2020), the NATS Streaming server (`server/stan`) and both clients. NATS Streaming is deprecated with no maintained version, and the fork doesn't look actively maintained, so security fixes in that code would have had to be made here. It's replaced with the NATS project's own libraries: `github.com/nats-io/nats-server/v2`, embedded so kubemq stays one binary with an in-process connection, and `github.com/nats-io/nats.go`, including its `jetstream` package.
+Upstream's fork of NATS held the NATS server (`server/gnatsd`, version 2.1.9 from about 2020), the NATS Streaming server (`server/stan`) and both clients. NATS Streaming is deprecated with no maintained version, and the fork doesn't look actively maintained, so security fixes in that code would have had to be made here. It's replaced with the NATS project's own libraries: `github.com/nats-io/nats-server/v2`, embedded so skuta stays one binary with an in-process connection, and `github.com/nats-io/nats.go`, including its `jetstream` package.
 
 This is a maintenance job first. One node stays the default and nothing has to be clustered.
 
 - [x] **Spike first.** Embed current `nats-server` with JetStream and try out what the queue rewrite depends on.
 - [x] **Move events, commands and queries to `nats.go`.** They use plain publish/subscribe and request/reply.
 - [x] **Rewrite queues and events store on JetStream.** `pkg/jstore`, with queue semantics staying in `pkg/client`.
-- [x] **Keep one node the default.** Streams have one replica and file storage under `store/`, so `kubemq server` on a laptop or in a single pod works as it did. `store.maxStorage` and `store.maxMemory` set JetStream's limits.
+- [x] **Keep one node the default.** Streams have one replica and file storage under `store/`, so `skuta server` on a laptop or in a single pod works as it did. `store.maxStorage` and `store.maxMemory` set JetStream's limits.
 - [x] **Migrate existing data.** Not migrated: an upgrade starts empty, as the README says, and the server warns when it finds the old files. A migrator would have to keep the fork as a dependency.
 - [x] **Remove the fork** from `go.mod`.
 - [ ] **Larger stored messages.** JetStream's file store refuses a message over about 32 MiB, while NATS Streaming stored up to `broker.maxPayload` (100 MB by default). Queues and events store now return a clear error above that. Splitting large messages into chunks would lift the limit; do it if someone needs it.
@@ -83,7 +83,7 @@ This is a maintenance job first. One node stays the default and nothing has to b
 
 ### 5. Benchmarks
 
-- [x] **Keep a benchmark tool in the repo.** `test/bench` runs against any running server, and `compare` shows the change between two runs (see the README). A negative `LOST` in its output means extra deliveries, and it takes a token through `-token`, not `KUBEMQ_TOKEN`.
+- [x] **Keep a benchmark tool in the repo.** `test/bench` runs against any running server, and `compare` shows the change between two runs (see the README). A negative `LOST` in its output means extra deliveries, and it takes a token through `-token`, not `SKUTA_TOKEN`.
 - [x] **Measure before and after the move, on one node.** On one laptop, compared with the old broker: receives are mostly faster (+16% to +111%), downstream is 5–11% slower, stream-ack 5% slower and pipeline 4% faster. Batches are 53–65% slower, events store sends about 20% slower, single sends under load 9–17% slower and channel creation about 30% slower. Memory in the benchmark run went from 4.5 GB to 1.7 GB.
 - [ ] **Publish the numbers,** measured on hardware more like production. Add a cluster run if step 4's clustering gets done.
 
@@ -95,7 +95,7 @@ This is a maintenance job first. One node stays the default and nothing has to b
 - [x] **Refuse a store another server is using.** A second server on the same store and host exits with a clear error. The lock belongs to the open file, so a crash doesn't leave it held.
 - [x] **Use absolute store paths as given.** `store.storePath: /data` used to become `./data` without a word, so a volume mounted at `/data` was never written to.
 - [ ] **Run the store lock on Windows.** It compiles there, but has only run on a Mac.
-- [ ] **Share `kubemq.db` between hosts, or don't.** Two servers with different `HOST` values can share a store path, but the second can't open the dashboard's `kubemq.db`. It logs an error and keeps running, and what that does to its dashboard hasn't been checked. `cleanStore` also deletes the other host's store.
+- [ ] **Share `skuta.db` between hosts, or don't.** Two servers with different `HOST` values can share a store path, but the second can't open the dashboard's `skuta.db`. It logs an error and keeps running, and what that does to its dashboard hasn't been checked. `cleanStore` also deletes the other host's store.
 - [ ] **Fix the Watch tab's timestamp on command responses.** It shows a date like `56830761419-06-22`, on the old broker too. Cosmetic.
 - [ ] **KEDA** docs and an example `ScaledObject` (see above).
 
@@ -112,7 +112,7 @@ This is a maintenance job first. One node stays the default and nothing has to b
 
 ### Chosen name: Skuta
 
-Chosen 2026-11-01. From Old Norse *skúta*, a light, fast ship; in modern Norwegian *skuta* is simply "the ship". The rename hasn't started, and the trademark check is still open.
+Chosen 2026-11-01. From Old Norse *skúta*, a light, fast ship; in modern Norwegian *skuta* is simply "the ship". The rename was done 2026-11-13; the trademark check is still open.
 
 Checked 2026-11-01:
 

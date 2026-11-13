@@ -2,9 +2,9 @@ package monitor
 
 import (
 	"context"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pb"
 
 	"github.com/tengla/skuta/pkg/logging"
 
@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	responseChannelPrefix = "kubemq_reports"
+	responseChannelPrefix = "skuta_reports"
 )
 
 func NewEventsMonitor(ctx context.Context, dataChan chan *Transport,

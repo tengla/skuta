@@ -49,5 +49,5 @@ func (b *BrokerConfig) Validate() error {
 }
 
 func BrokerName() string {
-	return "kubemq"
+	return "skuta"
 }

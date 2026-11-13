@@ -12,6 +12,10 @@ type RestConfig struct {
 	SubBuffSize  int             `json:"subBuffSize"`
 	BodyLimit    string          `json:"bodyLimit"`
 	Cors         *RestCorsConfig `json:"cors"`
+	// TrustedProxies lists the reverse proxies (IPs or CIDR ranges) whose
+	// X-Forwarded-For header names the client. Empty: the address of the
+	// connection is the client, and the header is ignored.
+	TrustedProxies []string `json:"trustedProxies"`
 }
 
 func defaultRestConfig() *RestConfig {
@@ -28,6 +32,7 @@ func defaultRestConfig() *RestConfig {
 		"Rest.Cors.AllowCredentials",
 		"Rest.Cors.ExposeHeaders",
 		"Rest.Cors.MaxAge",
+		"Rest.TrustedProxies",
 	)
 
 	return &RestConfig{
@@ -60,6 +65,9 @@ func (r *RestConfig) Validate() error {
 	}
 	if r.WriteTimeout < 0 {
 		return NewConfigurationError("bad REST configuration: WriteTimeout cannot be negative")
+	}
+	if _, err := ParseTrustedProxies(r.TrustedProxies); err != nil {
+		return NewConfigurationErrorf("bad REST configuration: %s", err.Error())
 	}
 	if r.Cors == nil {
 		return NewConfigurationError("bad Rest configuration: missing Cors configuration")

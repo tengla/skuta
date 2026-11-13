@@ -273,7 +273,7 @@ test_single_*/
 /config.yaml
 
 # Binary built by `task build`
-/kubemq
+/skuta
 
 # Local TLS certificates and keys from `task certs`
 /certs/

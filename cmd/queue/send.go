@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 )
 
@@ -25,22 +25,22 @@ type SendOptions struct {
 
 var queueSendExamples = `
 	# Send message to a queue channel channel
-	kubemq queue send q1 some-message
+	skuta queue send q1 some-message
 	
 	# Send message to a queue channel with metadata
-	kubemq queue send q1 some-message --metadata some-metadata
+	skuta queue send q1 some-message --metadata some-metadata
 	
 	# Send 5 messages to a queues channel with metadata
-	kubemq queue send q1 some-message --metadata some-metadata -m 5
+	skuta queue send q1 some-message --metadata some-metadata -m 5
 	
 	# Send message to a queue channel with a message expiration of 5 seconds
-	kubemq queue send q1 some-message -e 5
+	skuta queue send q1 some-message -e 5
 
 	# Send message to a queue channel with a message delay of 5 seconds
-	kubemq queue send q1 some-message -d 5
+	skuta queue send q1 some-message -d 5
 
 	# Send message to a queue channel with a message policy of max receive 5 times and dead-letter queue 'dead-letter'
-	kubemq queue send q1 some-message -r 5 -q dead-letter
+	skuta queue send q1 some-message -r 5 -q dead-letter
 `
 var queueSendLong = `Queues send command allows to send one or many message to a queue channel`
 var queueSendShort = `Queues send a message to a queue channel command`
@@ -96,7 +96,7 @@ func (o *SendOptions) Validate() error {
 func (o *SendOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

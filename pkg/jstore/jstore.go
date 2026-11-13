@@ -63,7 +63,7 @@ var (
 // hash; the subject itself is in the stream's configuration.
 func StreamName(subject string) string {
 	sum := sha256.Sum256([]byte(subject))
-	return "KUBEMQ_" + hex.EncodeToString(sum[:16])
+	return "SKUTA_" + hex.EncodeToString(sum[:16])
 }
 
 // Conn publishes and subscribes on one NATS connection.

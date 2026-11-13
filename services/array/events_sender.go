@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/tengla/skuta/pkg/logging"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 type EventsSender interface {

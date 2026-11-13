@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/nats-io/nuid"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"sync"
 
 	"github.com/tengla/skuta/pkg/logging"
@@ -17,7 +17,7 @@ import (
 	"github.com/tengla/skuta/pkg/client"
 )
 
-const middlewareCommChannel = "kubemq_monitor"
+const middlewareCommChannel = "skuta_monitor"
 
 type MiddlewareMessage struct {
 	Kind             string `json:"kind"`

@@ -11,8 +11,8 @@ import (
 	"net/url"
 	"strings"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/labstack/echo/v4"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 // CloudEvents over HTTP (https://github.com/cloudevents/spec), version 1.0:

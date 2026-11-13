@@ -3,10 +3,10 @@ package grpc
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/entities"
 	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/services/metrics"
 	"go.uber.org/atomic"
 	"io"

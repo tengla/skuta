@@ -21,10 +21,10 @@ type ListOptions struct {
 
 var queueListExamples = `
 	# Get a list of queues / clients
-	kubemq queue list
+	skuta queue list
 	
 	# Get a list of queues / clients filtered by 'some-queue' channel only
-	kubemq queue list -f some-queue
+	skuta queue list -f some-queue
 `
 var queueListLong = `Queues list command allows to get a list of 'queues' channels`
 var queueListShort = `Queues list of 'queues' channels`

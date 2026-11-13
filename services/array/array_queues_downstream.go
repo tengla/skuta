@@ -2,10 +2,10 @@ package array
 
 import (
 	"context"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/pkg/client"
 	"github.com/tengla/skuta/pkg/cmap"
 	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/tracing"
 	"github.com/tengla/skuta/pkg/uuid"
 )

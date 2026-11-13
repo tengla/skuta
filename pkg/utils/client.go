@@ -30,7 +30,7 @@ func APIHeader(cfg *config.Config) http.Header {
 // APIResponseError explains a failed API server response.
 func APIResponseError(r *resty.Response) error {
 	if r.StatusCode() == http.StatusUnauthorized {
-		return fmt.Errorf("the server requires a token: set client.authToken in config.yaml, created with `kubemq token`")
+		return fmt.Errorf("the server requires a token: set client.authToken in config.yaml, created with `skuta token`")
 	}
-	return fmt.Errorf("not available in current Kubemq version, consider upgrade Kubemq version")
+	return fmt.Errorf("not available in this Skuta version, consider upgrading")
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/nats-io/nuid"
@@ -16,6 +15,7 @@ import (
 	"github.com/tengla/skuta/pkg/api"
 	"github.com/tengla/skuta/pkg/authentication"
 	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/services/metrics"
 )
 
@@ -23,19 +23,19 @@ import (
 // statistics, send messages and peek at queues. It is served at /mcp on the
 // API port with the stateless streamable HTTP transport.
 //
-// With authentication on, agents send a token from `kubemq token` as a
+// With authentication on, agents send a token from `skuta token` as a
 // Bearer header. With authorization on, each tool call needs the permission
 // the matching client request would: send for send_message, receive for
 // peek_queue, and manage for the channels list_channels and get_stats show.
 
-const mcpInstructions = `This server is a KubeMQ message broker. Channels have one of five types:
+const mcpInstructions = `This server is a Skuta message broker (compatible with KubeMQ). Channels have one of five types:
 events (fire-and-forget pub/sub), events_store (persistent pub/sub), commands and queries
 (request/reply; a subscriber must answer within the timeout) and queues (persistent,
 pulled by consumers). Use list_channels to find channels, get_stats for broker health,
 peek_queue to look at waiting queue messages without consuming them, and send_message to publish.`
 
 const (
-	mcpClientID          = "kubemq-mcp"
+	mcpClientID          = "skuta-mcp"
 	mcpMaxPeekMessages   = 100
 	mcpMaxRequestTimeout = 60
 )
@@ -47,7 +47,7 @@ type mcpTools struct {
 
 func (s *Server) mcpHandler() http.Handler {
 	t := &mcpTools{svc: s.apiService, guard: s.guard}
-	server := mcp.NewServer(&mcp.Implementation{Name: "kubemq", Version: appConfig.GetVersion()}, &mcp.ServerOptions{Instructions: mcpInstructions})
+	server := mcp.NewServer(&mcp.Implementation{Name: "skuta", Version: appConfig.GetVersion()}, &mcp.ServerOptions{Instructions: mcpInstructions})
 	notDestructive := false
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_channels",
@@ -73,7 +73,7 @@ func (s *Server) mcpHandler() http.Handler {
 	var h http.Handler = mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
 	if s.auth != nil {
 		h = auth.RequireBearerToken(s.verifyMCPToken, &auth.RequireBearerTokenOptions{
-			// Tokens from `kubemq token` may have no expiry.
+			// Tokens from `skuta token` may have no expiry.
 			AllowMissingExpiration: true,
 		})(h)
 	}

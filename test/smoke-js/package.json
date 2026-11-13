@@ -1,7 +1,7 @@
 {
-  "name": "kubemq-ce-smoke-js",
+  "name": "skuta-smoke-js",
   "private": true,
-  "description": "Smoke test: the kubemq-js SDK against a running kubemq-ce server",
+  "description": "Smoke test: the kubemq-js SDK against a running Skuta server",
   "type": "module",
   "engines": {
     "node": ">=20.11.0"

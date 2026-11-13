@@ -17,12 +17,12 @@ import (
 
 	"encoding/json"
 	"github.com/gorilla/websocket"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/client"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 func setupRestApi(ctx context.Context, t *testing.T) (*client.Client, *config.Config, *echo.Echo, *broker.Service) {

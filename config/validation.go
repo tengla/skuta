@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
+	"strings"
 )
 
 func validateParameters(params ...string) bool {
@@ -45,4 +47,30 @@ func validatePort(port int) error {
 		return fmt.Errorf("port %d is invalid", port)
 	}
 	return nil
+}
+
+// ParseTrustedProxies reads the addresses of reverse proxies whose
+// X-Forwarded-For header a server may believe: single IPs or CIDR ranges.
+func ParseTrustedProxies(values []string) ([]*net.IPNet, error) {
+	var ranges []*net.IPNet
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if ip := net.ParseIP(value); ip != nil {
+			bits := 128
+			if ip.To4() != nil {
+				ip, bits = ip.To4(), 32
+			}
+			ranges = append(ranges, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+			continue
+		}
+		_, ipNet, err := net.ParseCIDR(value)
+		if err != nil {
+			return nil, fmt.Errorf("trusted proxy %q is not an IP address or a CIDR range", value)
+		}
+		ranges = append(ranges, ipNet)
+	}
+	return ranges, nil
 }

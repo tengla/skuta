@@ -2,6 +2,8 @@ package rest
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,8 +12,6 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	sdk "github.com/kubemq-io/kubemq-go"
-	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/tlstest"
@@ -94,11 +94,19 @@ func TestRestServer_TLS(t *testing.T) {
 	appConfig.Security = secConfig
 	_, gs, svc := setup(ctx, t, appConfig)
 	defer tearDown(gs, svc)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("https://0.0.0.0:%d", appConfig.Rest.Port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
+	pool := x509.NewCertPool()
+	require.True(t, pool.AppendCertsFromPEM([]byte(testCert)))
+	httpClient := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool}, DisableKeepAlives: true}}
+	var res *http.Response
+	var err error
+	// The server starts listening in the background.
+	require.Eventually(t, func() bool {
+		res, err = httpClient.Get(fmt.Sprintf("https://0.0.0.0:%d/ping", appConfig.Rest.Port))
+		return err == nil || !isConnRefused(err)
+	}, 5*time.Second, 50*time.Millisecond)
 	require.NoError(t, err)
-	require.NotNil(t, client)
-	err = client.Close()
-	require.NoError(t, err)
+	_ = res.Body.Close()
+	require.Equal(t, http.StatusOK, res.StatusCode)
 
 }
 

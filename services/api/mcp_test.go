@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/authentication"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/pipe"
 	"github.com/tengla/skuta/services"
 )

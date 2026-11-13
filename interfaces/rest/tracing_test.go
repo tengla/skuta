@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/fortytw2/leaktest"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/tracing"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"

@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 )
 
@@ -21,10 +21,10 @@ type ReceiveOptions struct {
 
 var commandsReceiveExamples = `
 	# Receive commands from a 'commands' channel (blocks until next body)
-	kubemq commands receive some-channel
+	skuta commands receive some-channel
 
 	# Receive commands from a 'commands' channel with group (blocks until next body)
-	kubemq commands receive some-channel -g G1
+	skuta commands receive some-channel -g G1
 `
 var commandsReceiveLong = `Command receive (Subscribe) command allows to consume a body from 'commands' channel and response with appropriate reply`
 var commandsReceiveShort = `Command receive a body from 'commands' channel command`
@@ -70,7 +70,7 @@ func (o *ReceiveOptions) Validate() error {
 func (o *ReceiveOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

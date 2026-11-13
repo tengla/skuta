@@ -18,12 +18,12 @@ type Stats struct {
 func toStats(mf []*Family) []*Stats {
 	var list []*Stats
 	for _, family := range mf {
-		if strings.Contains(family.Name, "kubemq") {
+		if strings.Contains(family.Name, "skuta") {
 			for _, metric := range family.Metrics {
 				switch v := metric.(type) {
 				case Metric:
 					st := &Stats{
-						Name:     strings.Replace(family.Name, "kubemq_", "", -1),
+						Name:     strings.Replace(family.Name, "skuta_", "", -1),
 						Node:     v.Labels["node"],
 						Type:     v.Labels["type"],
 						Side:     v.Labels["side"],

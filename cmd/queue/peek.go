@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 )
@@ -21,10 +21,10 @@ type PeekOptions struct {
 
 var queuePeekExamples = `
 	# Peek 1 messages from a queue and wait for 2 seconds (default)
-	kubemq queue peek some-channel
+	skuta queue peek some-channel
 
 	# Peek 3 messages from a queue and wait for 5 seconds
-	kubemq queue peek some-channel -m 3 -w 5
+	skuta queue peek some-channel -m 3 -w 5
 `
 var queuePeekLong = `Queues peek command allows to peek one or many messages from a queue channel without removing them from the queue`
 var queuePeekShort = `Queues peek a messages from a queue channel command`
@@ -71,7 +71,7 @@ func (o *PeekOptions) Validate() error {
 func (o *PeekOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

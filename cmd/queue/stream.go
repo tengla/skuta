@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 )
@@ -25,10 +25,10 @@ type StreamOptions struct {
 
 var queueStreamExamples = `
 	# Stream 'queues' message in transaction mode
-	kubemq queue stream q1
+	skuta queue stream q1
 
 	# Stream 'queues' message in transaction mode with visibility set to 120 seconds and wait time of 180 seconds
-	kubemq queue stream q1 -v 120 -w 180
+	skuta queue stream q1 -v 120 -w 180
 `
 var queueStreamLong = `Queues stream command allows to receive message from a queue in push mode response an appropriate action`
 var queueStreamShort = `Queues stream a message from a queue command`
@@ -76,7 +76,7 @@ var errAbort = errors.New("aborted")
 func (o *StreamOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

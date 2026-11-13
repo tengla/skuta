@@ -9,28 +9,28 @@ import (
 
 var queueExamples = `
 	# Execute send 'queues' command
-	kubemq queues send
+	skuta queues send
 
 	# Execute attached to 'queues' command
-	kubemq queues attach
+	skuta queues attach
 
 	# Execute receive 'queues' command
-	kubemq queues receive
+	skuta queues receive
 	
 	# Execute list 'queues' command
-	kubemq queues list
+	skuta queues list
 
 	# Execute peek 'queues' command
-	kubemq queues peek
+	skuta queues peek
 
 	# Execute ack 'queues' command
-	 kubemq queues ack
+	 skuta queues ack
 
 	# Execute stream 'queues' command
-	kubemq queues stream
+	skuta queues stream
 `
-var queueLong = `Execute Kubemq 'queues' commands`
-var queueShort = `Execute Kubemq 'queues' commands`
+var queueLong = `Execute Skuta 'queues' commands`
+var queueShort = `Execute Skuta 'queues' commands`
 
 func NewCmdQueue(ctx context.Context, cfg *config.Config) *cobra.Command {
 

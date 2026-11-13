@@ -3,8 +3,8 @@ package events
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 
@@ -22,16 +22,16 @@ type SendOptions struct {
 
 var eventsSendExamples = `
 	# Send (Publish) body to a 'events' channel
-	kubemq events send some-channel some-body
+	skuta events send some-channel some-body
 	
 	# Send (Publish) body to a 'events' channel with metadata
-	kubemq events send some-channel some-body --metadata some-metadata
+	skuta events send some-channel some-body --metadata some-metadata
 	
 	# Send (Publish) batch of 10 messages to a 'events' channel
-	kubemq events send some-channel some-body -m 10
+	skuta events send some-channel some-body -m 10
 
 	# Send (Publish) batch of 100 messages to a 'events' channel in stream mode
-	kubemq events send some-channel some-body -m 100 -s
+	skuta events send some-channel some-body -m 100 -s
 `
 var eventsSendLong = `Events send command allows to send (publish) one or many messages to an 'events' channel`
 var eventsSendShort = `Events send messages to an 'events' channel command`
@@ -83,7 +83,7 @@ func (o *SendOptions) Validate() error {
 func (o *SendOptions) Run(ctx context.Context) error {
 	client, err := grpcclient.New(o.cfg.Client)
 	if err != nil {
-		return fmt.Errorf("create kubemq client, %s", err.Error())
+		return fmt.Errorf("create skuta client, %s", err.Error())
 	}
 
 	defer func() {

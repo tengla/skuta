@@ -5,7 +5,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     main: ./main.go
-    binary: kubemq
+    binary: skuta
     goos:
       - darwin
       - linux

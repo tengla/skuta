@@ -17,19 +17,19 @@ type AttachOptions struct {
 
 var queriesAttachExamples = `
 	# attach to all 'queries' channels and output running messages
-	kubemq queries attach *
+	skuta queries attach *
 	
 	# attach to some-query 'queries' channel and output running messages
-	kubemq queries attach some-query
+	skuta queries attach some-query
 
 	# attach to some-queries1 and some-queries2 'queries' channels and output running messages
-	kubemq queries attach some-queries1 some-queries2 
+	skuta queries attach some-queries1 some-queries2 
 
 	# attach to some-queries 'queries' channel and output running messages filter by include regex (some*)
-	kubemq queries attach some-queries -i some*
+	skuta queries attach some-queries -i some*
 
 	# attach to some-queries 'queries' channel and output running messages filter by exclude regex (not-some*)
-	kubemq queries attach some-queries -e not-some*
+	skuta queries attach some-queries -e not-some*
 `
 var queriesAttachLong = `Queries attach command allows to display 'queries' channel content for debugging proposes`
 var queriesAttachShort = `Queries attach to 'queries' channels command`
