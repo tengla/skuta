@@ -183,6 +183,8 @@ audit:
 
 The audit log has one JSON line per request with the time, transport, remote address, subject, token ID, client ID, operation, action, channel type, channel and outcome (`allowed`, `denied` or `unauthenticated`). On a stream, each channel is logged once per stream rather than per message. On the dashboard, sign-ins, actions and opened subscriptions are logged, but not page refreshes. It works without authentication too, without subjects.
 
+On the REST and dashboard ports the remote address is the address of the connection. `X-Forwarded-For` is ignored unless the connection comes from a proxy listed in `rest.trustedProxies` or `api.trustedProxies` (IPs or CIDR ranges, also `REST_TRUSTED_PROXIES` and `API_TRUSTED_PROXIES`), so a client can't choose the address that is logged. Behind an ingress or load balancer, list its addresses to get the real client address.
+
 ### TLS
 
 gRPC (port 50000) and REST (port 9090) use TLS when the `security` section has a certificate and key. Add a CA and they require mTLS: clients must present a certificate signed by that CA.
