@@ -1,6 +1,6 @@
 module github.com/tengla/skuta/test/smoke-go
 
-go 1.26
+go 1.27
 
 require github.com/kubemq-io/kubemq-go v1.9.0
 

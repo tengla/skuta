@@ -11,7 +11,7 @@ Skuta is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-commun
 
 ## How it differs from upstream
 
-- **No usage reporting.** Upstream sends hostname, a host fingerprint, message counts and environment to `api.kubemq.io` at startup and every 5 minutes. That code is gone.
+- **No usage reporting.** Upstream sends hostname, a host fingerprint, message counts and environment to its vendor's servers at startup and every 5 minutes. That code is gone.
 - **Runs on Kubernetes.** Upstream refuses to start inside a Kubernetes pod. Skuta starts there like it does anywhere else.
 - **A new dashboard, built from source.** Upstream ships its dashboard only as a compiled bundle. This one lives in [`web/`](web) (Vue 3 + Vite) and covers every channel type. See [Web dashboard](#web-dashboard).
 - **Authentication.** Upstream's community edition has authentication settings but ignores them. Here, gRPC and REST clients can be required to send a JWT, and the dashboard asks for one at sign-in. Tokens can be revoked one by one, rules can limit each token to some channels, and an audit log records who did what. See [Authentication](#authentication).
@@ -19,12 +19,12 @@ Skuta is a fork of [KubeMQ Community](https://github.com/kubemq-io/kubemq-commun
 - **OpenTelemetry tracing.** Traces follow each message from producer through the broker to its consumers. See [Tracing](#tracing).
 - **CloudEvents and MCP.** Anything that can POST a [CloudEvent](#cloudevents) can publish, and AI agents can use the broker through a built-in [MCP server](#mcp-server-for-ai-agents).
 - **Maintained storage.** Upstream runs on its own fork of NATS Streaming, which is deprecated. Here, messages are kept in JetStream on the current `nats-server`. See [Storage](#storage).
-- **Current dependencies.** Go 1.26 and up-to-date gRPC, Prometheus, echo and NATS libraries.
+- **Current dependencies.** Go 1.27 and up-to-date gRPC, Prometheus, echo and NATS libraries.
 - **Fixes.** The dashboard no longer shows another server's metrics when two run on the same host, and links to individual channels work on reload.
 
 The server is single-node: several replicas are separate brokers with separate storage, not a cluster.
 
-The upstream Docker image (`kubemq/kubemq-community`) and release binaries don't include any of this. Build from this repository.
+The upstream Docker image and release binaries don't include any of this. Build from this repository.
 
 ## Quick start
 
@@ -41,7 +41,7 @@ Then open [http://localhost:8080](http://localhost:8080).
 
 ### From source
 
-Requires Go 1.26 or later. The dashboard is committed in `assets/` and embedded in the binary, so Node.js is only needed if you change it.
+Requires Go 1.27 or later. The dashboard is committed in `assets/` and embedded in the binary, so Node.js is only needed if you change it.
 
 ```bash
 task build          # or plain `go build -o skuta .`, which reports the commit as its version
@@ -123,7 +123,7 @@ Create tokens with the binary, using the same configuration:
 
 Without `--ttl` the token never expires. The server checks the signature, the algorithm and, if present, the expiry. The subject names who the token is for: [permissions](#permissions) and the [audit log](#audit-log) use it. `skuta token` also prints the token's ID to stderr; keep it, so you can [revoke](#revoking-tokens) that one token later.
 
-Clients send the token in the `authorization` gRPC metadata key or the `Authorization` HTTP header, with or without `Bearer `. The SDKs do this when given a token: `credentials` in kubemq-js, `WithAuthToken` in kubemq-go. The `skuta` CLI uses `client.authToken` from `config.yaml`.
+Clients send the token in the `authorization` gRPC metadata key or the `Authorization` HTTP header, with or without `Bearer `. The SDKs do this when given a token: `credentials` in the Node SDK, `WithAuthToken` in the Go SDK. The `skuta` CLI uses `client.authToken` from `config.yaml`.
 
 With authentication on, gRPC (port 50000) and REST (port 9090) reject other requests with `Unauthenticated` or `401`. Only `Ping` and `GET /ping` are open, for health checks. Use TLS (the `security` section) so tokens aren't sent in clear text.
 
@@ -219,7 +219,7 @@ client:
     serverName: ""               # name to check in the server's certificate, grpcHost by default
 ```
 
-or `CLIENT_TLS_ENABLE`, `CLIENT_TLS_CA_FILENAME`, `CLIENT_TLS_CERT_FILENAME`, `CLIENT_TLS_KEY_FILENAME` and `CLIENT_TLS_SERVER_NAME`. kubemq-js presents a client certificate with `tls.clientCert` and `tls.clientKey`. kubemq-go (v1.9.0) can't present one, so it can't connect to a server in mTLS mode.
+or `CLIENT_TLS_ENABLE`, `CLIENT_TLS_CA_FILENAME`, `CLIENT_TLS_CERT_FILENAME`, `CLIENT_TLS_KEY_FILENAME` and `CLIENT_TLS_SERVER_NAME`. The Node SDK presents a client certificate with `tls.clientCert` and `tls.clientKey`. The Go SDK (v1.9.0) can't present one, so it can't connect to a server in mTLS mode.
 
 ### Clustering
 
@@ -305,7 +305,7 @@ The `skuta` binary is also a command-line client:
 
 See the CLI reference for [queues](docs/cli/skuta_queues.md), [events](docs/cli/skuta_events.md), [events store](docs/cli/skuta_events_store.md), [commands](docs/cli/skuta_commands.md) and [queries](docs/cli/skuta_queries.md).
 
-Skuta keeps upstream's gRPC and REST API, so the upstream KubeMQ SDKs connect to it: [Go](https://github.com/kubemq-io/kubemq-go), [Java](https://github.com/kubemq-io/kubemq-Java), [Python](https://github.com/kubemq-io/kubemq-Python), [Node](https://github.com/kubemq-io/kubemq-js) and [C#](https://github.com/kubemq-io/kubemq-CSharp). Upstream's [documentation](https://docs.kubemq.io/) explains the messaging patterns. The SDKs' channel management calls (`createChannel`, `listChannels`, `deleteChannel` and their per-type variants) work too, and so does the query cache: a query with a cache key gets the stored response of an earlier query with the same key on the same channel, marked as a cache hit, until its TTL runs out. The SDKs disagree on the TTL's unit, so values under 1000 are read as seconds and larger ones as milliseconds.
+Skuta keeps upstream's gRPC and REST API, so upstream's SDKs connect to it: [Go](https://github.com/kubemq-io/kubemq-go), [Java](https://github.com/kubemq-io/kubemq-Java), [Python](https://github.com/kubemq-io/kubemq-Python), [Node](https://github.com/kubemq-io/kubemq-js) and [C#](https://github.com/kubemq-io/kubemq-CSharp). Upstream's [documentation](https://docs.kubemq.io/) explains the messaging patterns. The SDKs' channel management calls (`createChannel`, `listChannels`, `deleteChannel` and their per-type variants) work too, and so does the query cache: a query with a cache key gets the stored response of an earlier query with the same key on the same channel, marked as a cache hit, until its TTL runs out. The SDKs disagree on the TTL's unit, so values under 1000 are read as seconds and larger ones as milliseconds.
 
 ### CloudEvents
 
@@ -333,17 +333,17 @@ claude mcp add --transport http skuta http://localhost:8080/mcp --header "Author
 task build_all                                       # rebuild the dashboard, then the binary
 npm --prefix web ci && npm --prefix web run dev      # dashboard dev server with hot reload
 go test ./...                                        # tests (the integration tests take several minutes)
-task smoke -- localhost:50000                        # kubemq-js SDK smoke test against a running server
-task smoke-go -- localhost:50000                     # kubemq-go SDK smoke test against a running server
+task smoke -- localhost:50000                        # Node SDK smoke test against a running server
+task smoke-go -- localhost:50000                     # Go SDK smoke test against a running server
 task bench -- -addr localhost:50000 -out new.json    # benchmarks against a running server
 task certs                                           # a local CA, server and client certificate in certs/, for TLS
 ```
 
 The dashboard dev server proxies API calls to a broker on `http://localhost:8080`. Set `BROKER_URL` to use another one. Run `task web` and commit `assets/` after changing the dashboard, since `go build` embeds whatever is there.
 
-`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `SKUTA_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `SKUTA_TLS_CA`, `SKUTA_TLS_CERT` and `SKUTA_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
+`task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through upstream's Node SDK (pinned in its `package.json`). Set `SKUTA_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `SKUTA_TLS_CA`, `SKUTA_TLS_CERT` and `SKUTA_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
 
-`task smoke-go` runs [`test/smoke-go`](test/smoke-go/main.go), the same kind of check through the Go SDK (kubemq-go), including its queue stream client. It is a Go module of its own, so the server doesn't depend on the SDK. It reads `SKUTA_TOKEN` and `SKUTA_TLS_CA`, and with `SKUTA_REST_URL=http://localhost:9090` it also runs the queue checks over the SDK's REST transport. kubemq-go can't present a client certificate, so use it against a server without mTLS.
+`task smoke-go` runs [`test/smoke-go`](test/smoke-go/main.go), the same kind of check through upstream's Go SDK, including its queue stream client. It is a Go module of its own, so the server doesn't depend on the SDK. It reads `SKUTA_TOKEN` and `SKUTA_TLS_CA`, and with `SKUTA_REST_URL=http://localhost:9090` it also runs the queue checks over the SDK's REST transport. The Go SDK can't present a client certificate, so use it against a server without mTLS.
 
 `task bench` runs [`test/bench`](test/bench/main.go), which measures every messaging pattern over gRPC against a server you started, so it works with any build. Each scenario runs three times and prints medians, and anything sent but never received is reported as lost. It writes to fresh `bench.<id>.*` channels and deletes them after each run. It stores up to 1 GiB per scenario (`-budget`), so give it a server you don't mind loading.
 
