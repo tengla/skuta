@@ -53,7 +53,7 @@ The enterprise features such teams would pay for are mostly done: access control
 - [ ] **Make the suite faster.** It takes about 13 minutes, mostly in `pkg/client` (6 min) and `interfaces/grpc` (4 min). Look for fixed sleeps and per-test broker startups that can be shared.
 - [ ] **Make the tests pass under `-race`.** The stream tests in `pkg/client` fail there, as they did before the move to JetStream, because they log after the test has ended. `TestRestServer_CloudEvents` also failed once with connection refused, cause unknown.
 - [ ] **Run CI on every pull request:** `go vet`, golangci-lint, the Go tests, the dashboard build (check that `assets/` matches `web/`) and `task smoke` against a freshly built server.
-- [ ] **Check more SDKs.** Add smoke tests for kubemq-go, kubemq-Python, kubemq-Java and kubemq-CSharp next to the kubemq-js one, and run them all in CI (see step 0).
+- [ ] **Check more SDKs.** Add smoke tests for kubemq-Python, kubemq-Java and kubemq-CSharp next to the kubemq-js and kubemq-go ones (`task smoke`, `task smoke-go`), and run them all in CI (see step 0).
 
 ### 2. Releases
 

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 // queryCacheMaxEntries bounds the cache. When it is full of unexpired

@@ -15,11 +15,11 @@ import (
 
 	"context"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/pkg/client"
 	"github.com/tengla/skuta/pkg/logging"
 	"github.com/tengla/skuta/pkg/monitor"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/tracing"
 )
 

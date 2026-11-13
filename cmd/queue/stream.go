@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/spf13/cobra"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 )

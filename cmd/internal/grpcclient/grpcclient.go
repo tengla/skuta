@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

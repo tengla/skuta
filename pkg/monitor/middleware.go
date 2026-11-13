@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/nats-io/nuid"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"sync"
 
 	"github.com/tengla/skuta/pkg/logging"

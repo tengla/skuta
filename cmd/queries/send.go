@@ -3,8 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/tengla/skuta/cmd/internal/grpcclient"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/utils"
 	"github.com/tengla/skuta/pkg/uuid"
 	"time"

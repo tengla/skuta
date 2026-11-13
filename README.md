@@ -332,6 +332,7 @@ task build_all                                       # rebuild the dashboard, th
 npm --prefix web ci && npm --prefix web run dev      # dashboard dev server with hot reload
 go test ./...                                        # tests (the integration tests take several minutes)
 task smoke -- localhost:50000                        # kubemq-js SDK smoke test against a running server
+task smoke-go -- localhost:50000                     # kubemq-go SDK smoke test against a running server
 task bench -- -addr localhost:50000 -out new.json    # benchmarks against a running server
 task certs                                           # a local CA, server and client certificate in certs/, for TLS
 ```
@@ -339,6 +340,8 @@ task certs                                           # a local CA, server and cl
 The dashboard dev server proxies API calls to a broker on `http://localhost:8080`. Set `BROKER_URL` to use another one. Run `task web` and commit `assets/` after changing the dashboard, since `go build` embeds whatever is there.
 
 `task smoke` runs [`test/smoke-js`](test/smoke-js/smoke.mjs), which exercises every messaging pattern through the official Node SDK (kubemq-js, pinned in its `package.json`). Set `SKUTA_TOKEN` when authentication is on. When `certs/` from `task certs` exists, `task smoke` and `task bench` connect with mTLS using those certificates; add `TLS=false` for a server without TLS. Run directly, both read the files from `SKUTA_TLS_CA`, `SKUTA_TLS_CERT` and `SKUTA_TLS_KEY`. `task smoke` writes to fresh `smoke.<id>.*` channels on the target server, and needs a token that may send, receive and manage them.
+
+`task smoke-go` runs [`test/smoke-go`](test/smoke-go/main.go), the same kind of check through the Go SDK (kubemq-go), including its queue stream client. It is a Go module of its own, so the server doesn't depend on the SDK. It reads `SKUTA_TOKEN` and `SKUTA_TLS_CA`, and with `SKUTA_REST_URL=http://localhost:9090` it also runs the queue checks over the SDK's REST transport. kubemq-go can't present a client certificate, so use it against a server without mTLS.
 
 `task bench` runs [`test/bench`](test/bench/main.go), which measures every messaging pattern over gRPC against a server you started, so it works with any build. Each scenario runs three times and prints medians, and anything sent but never received is reported as lost. It writes to fresh `bench.<id>.*` channels and deletes them after each run. It stores up to 1 GiB per scenario (`-budget`), so give it a server you don't mind loading.
 

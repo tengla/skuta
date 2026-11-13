@@ -3,7 +3,7 @@ package monitor
 import (
 	"encoding/json"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 	"time"
 )
 

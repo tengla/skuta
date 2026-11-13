@@ -3,11 +3,11 @@ package rest
 import (
 	"encoding/json"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/assert"
 	test2 "github.com/tengla/skuta/interfaces/test"
 	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/pipe"
 	"github.com/tengla/skuta/services/metrics"
 	"io/ioutil"
@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	sdk "github.com/kubemq-io/kubemq-go"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/tengla/skuta/pkg/logging"
@@ -196,22 +195,14 @@ func TestRestServer_Queue_SendAndReceive(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(10).SetWaitTimeSeconds(10).Send(ctx)
+	rxRes, err := client.receive(channel, 10, 10, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 10, len(rxRes.Messages))
@@ -223,28 +214,21 @@ func TestRestServer_Queue_SendAndReceiveWithPeak(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId("some-client-id"), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
+	client := newQueueClient(port, "some-client-id")
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err := client.receive(channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(10).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(channel, 10, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 10, len(rxRes.Messages))
@@ -257,40 +241,33 @@ func TestRestServer_Queue_SendAndReceiveWithAckAllAndPeak(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId("some-client-id"), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
+	client := newQueueClient(port, "some-client-id")
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err := client.receive(channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(channel, 5, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err = client.receive(channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	ackRes, err := client.AQM().SetChannel(channel).SetWaitTimeSeconds(1).Send(ctx)
+	ackRes, err := client.ackAll(channel, 1)
 	require.NoError(t, err)
 	require.NotNil(t, ackRes)
 	require.Equal(t, uint64(5), ackRes.AffectedMessages)
@@ -302,65 +279,33 @@ func TestRestServer_Queue_SendAndStreamReceive(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
 	counter := atomic.NewInt64(0)
-	go func() {
-		client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-		require.NoError(t, err)
-		defer client2.Close()
-		for {
-			if counter.Load() == 10 {
-				return
-			}
-			stream := client2.SQM().SetChannel(channel)
-			msg, err := stream.Next(ctx, 1, 5)
-			if err != nil {
-				continue
-			}
-			if msg != nil {
-				err = msg.Ack()
-				require.NoError(t, err)
-				counter.Inc()
+	for i := 0; i < 2; i++ {
+		go func() {
+			client2 := newQueueClient(port, "")
+			for {
+				if counter.Load() == 10 || ctx.Err() != nil {
+					return
+				}
+				stream := client2.stream(channel)
+				msg, err := stream.next(1, 5)
+				if err != nil {
+					continue
+				}
+				if msg != nil {
+					err = stream.ack()
+					require.NoError(t, err)
+					counter.Inc()
 
+				}
+				stream.close()
 			}
-			stream.Close()
-		}
-	}()
-
-	go func() {
-		client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-		require.NoError(t, err)
-		defer client2.Close()
-		for {
-			if counter.Load() == 10 {
-				return
-			}
-			stream := client2.SQM().SetChannel(channel)
-			msg, err := stream.Next(ctx, 1, 5)
-			if err != nil {
-				continue
-			}
-			if msg != nil {
-				err = msg.Ack()
-				require.NoError(t, err)
-				counter.Inc()
-
-			}
-			stream.Close()
-
-		}
-	}()
-	time.Sleep(2000 * time.Millisecond)
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
+		}()
 	}
-	res, err := messages.Send(ctx)
+	time.Sleep(2000 * time.Millisecond)
+	res, err := client.sendBatch(client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
@@ -377,39 +322,32 @@ func TestRestServer_Queue_SendAndStreamReceiveWithReject(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
 	newChannel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg reject")).
-		SetPolicyMaxReceiveCount(2).
-		SetPolicyMaxReceiveQueue(newChannel).Send(ctx)
+	msg := client.message(channel, []byte("msg reject"))
+	msg.Policy = &pb.QueueMessagePolicy{MaxReceiveCount: 2, MaxReceiveQueue: newChannel}
+	result, err := client.send(msg)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client2.Close()
+	client2 := newQueueClient(port, "")
 	for i := 0; i < 3; i++ {
-		stream := client2.SQM().SetChannel(channel)
-		msg, err := stream.Next(ctx, 1, 5)
+		stream := client2.stream(channel)
+		msg, err := stream.next(1, 5)
 		if err != nil {
 			continue
 		}
 		if msg != nil {
-			err = msg.Reject()
+			err = stream.reject()
 			require.NoError(t, err)
 		}
-		stream.Close()
+		stream.close()
 
 	}
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.NewReceiveQueueMessagesRequest().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(10).Send(ctx)
+	rxRes, err := client.receive(newChannel, 1, 10, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -422,33 +360,26 @@ func TestRestServer_Queue_SendAndStreamReceiveWithExtendVisibility(t *testing.T)
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg extend")).Send(ctx)
+	result, err := client.send(client.message(channel, []byte("msg extend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client2.Close()
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	client2 := newQueueClient(port, "")
+	stream := client2.stream(channel)
+	defer stream.close()
+	msgRx, err := stream.next(2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.ExtendVisibility(2)
+	err = stream.extendVisibility(2)
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.Ack()
+	err = stream.ack()
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	stream.Close()
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
@@ -461,35 +392,28 @@ func TestRestServer_Queue_SendAndStreamReceiveWithResendToNewQueue(t *testing.T)
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
 	newChannel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg resend")).Send(ctx)
+	result, err := client.send(client.message(channel, []byte("msg resend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client2.Close()
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	client2 := newQueueClient(port, "")
+	stream := client2.stream(channel)
+	defer stream.close()
+	msgRx, err := stream.next(2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.Resend(newChannel)
+	err = stream.resend(newChannel)
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	stream.Close()
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
-	rxRes, err = client.RQM().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(newChannel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -502,37 +426,28 @@ func TestRestServer_Queue_SendAndStreamReceiveWithResendWithNewMessage(t *testin
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client.Close()
+	client := newQueueClient(port, "")
 	channel := nuid.Next()
 	newChannel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg resend")).Send(ctx)
+	result, err := client.send(client.message(channel, []byte("msg resend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer client2.Close()
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	client2 := newQueueClient(port, "")
+	stream := client2.stream(channel)
+	defer stream.close()
+	msgRx, err := stream.next(2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = stream.ResendWithNewMessage(client.QM().SetId(nuid.Next()).
-		SetChannel(newChannel).
-		SetBody([]byte("new msg")))
+	err = stream.resendWithNewMessage(client.message(newChannel, []byte("new msg")))
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	stream.Close()
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
-	rxRes, err = client.RQM().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(newChannel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -544,32 +459,22 @@ func TestRestServer_QueueInfo_SendAndReceive(t *testing.T) {
 	defer cancel()
 	port, svc, s := setup(ctx, t)
 	defer tearDown(svc, s)
-	client, err := sdk.NewClient(ctx, sdk.WithUri(fmt.Sprintf("http://localhost:%d", port)), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeRest))
-	require.NoError(t, err)
-	defer func() {
-		_ = client.Close()
-	}()
+	client := newQueueClient(port, "")
 
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(10).SetWaitTimeSeconds(10).Send(ctx)
+	rxRes, err := client.receive(channel, 10, 10, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 10, len(rxRes.Messages))
 
-	qi, err := client.QueuesInfo(ctx, "")
+	qi, err := client.queuesInfo("")
 	require.NoError(t, err)
-	require.EqualValues(t, int32(1), qi.TotalQueues)
+	require.EqualValues(t, int32(1), qi.TotalQueue)
 	require.EqualValues(t, int64(10), qi.Sent)
 	require.EqualValues(t, int64(10), qi.Delivered)
 	require.EqualValues(t, 0, qi.Waiting)

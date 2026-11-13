@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 
 	"github.com/tengla/skuta/config"
 	"github.com/tengla/skuta/interfaces/grpc/middleware"
@@ -32,7 +32,7 @@ func NewClientOptions(addr string) *ClientOptions {
 	}
 }
 
-//TODO - Add test for secure gRPC
+// TODO - Add test for secure gRPC
 func (co *ClientOptions) SetSecureConnection(certFile, certDomain string) *ClientOptions {
 	co.certFile = certFile
 	co.certDomain = certDomain

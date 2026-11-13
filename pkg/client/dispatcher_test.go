@@ -2,9 +2,9 @@ package client
 
 import (
 	"context"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
+	"github.com/tengla/skuta/pkg/pb"
 	"testing"
 )
 

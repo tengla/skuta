@@ -53,6 +53,15 @@ tasks:
     cmds:
       - npm ci
       - node smoke.mjs {{.CLI_ARGS}}
+  # Runs test/smoke-go (the kubemq-go SDK) against a running server:
+  # task smoke-go -- [host:port]. Set SKUTA_TOKEN when authentication is on and
+  # SKUTA_TLS_CA for a server with TLS; kubemq-go can't present a client
+  # certificate, so it can't reach a server in mTLS mode. SKUTA_REST_URL
+  # (http://localhost:9090) adds the checks over the SDK's REST transport.
+  smoke-go:
+    dir: test/smoke-go
+    cmds:
+      - go run . {{.CLI_ARGS}}
   # Creates a local CA plus a server and a client certificate signed by it, for
   # trying TLS and mTLS (see "TLS" in README.md). The server certificate is
   # valid for localhost and 127.0.0.1; add names with

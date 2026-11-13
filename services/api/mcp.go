@@ -8,7 +8,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/nats-io/nuid"
@@ -16,6 +15,7 @@ import (
 	"github.com/tengla/skuta/pkg/api"
 	"github.com/tengla/skuta/pkg/authentication"
 	"github.com/tengla/skuta/pkg/guard"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/services/metrics"
 )
 

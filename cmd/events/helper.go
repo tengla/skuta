@@ -4,7 +4,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 type object struct {

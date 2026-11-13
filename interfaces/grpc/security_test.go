@@ -2,16 +2,16 @@ package grpc
 
 import (
 	"context"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	sdk "github.com/kubemq-io/kubemq-go"
-	pb "github.com/kubemq-io/protobuf/go"
-	"github.com/nats-io/nuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tengla/skuta/config"
+	"github.com/tengla/skuta/pkg/pb"
 	"github.com/tengla/skuta/pkg/tlstest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -100,6 +100,23 @@ CmRxliAhDXR5wgmEfBcPIRi+Mw==
 -----END PRIVATE KEY-----`
 )
 
+// pingWithCert pings the server over TLS, trusting only the given certificate.
+func pingWithCert(ctx context.Context, port int, certPEM string) error {
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(certPEM)) {
+		return errors.New("no certificate in the PEM data")
+	}
+	conn, err := grpc.NewClient(fmt.Sprintf("0.0.0.0:%d", port), grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(pool, "")))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	_, err = pb.NewKubemqClient(conn).Ping(pingCtx, &pb.Empty{})
+	return err
+}
+
 func TestGRPCServer_TLS(t *testing.T) {
 	defer leaktest.Check(t)()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -120,11 +137,7 @@ func TestGRPCServer_TLS(t *testing.T) {
 	appConfig.Security = secConfig
 	appConfig, gs, svc := setup(ctx, t, appConfig)
 	defer tearDown(gs, svc)
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC), sdk.WithCertificate(testCert, ""), sdk.WithCheckConnection(true))
-	require.NoError(t, err)
-	require.NotNil(t, client)
-	err = client.Close()
-	require.NoError(t, err)
+	require.NoError(t, pingWithCert(ctx, appConfig.Grpc.Port, testCert))
 
 }
 func TestGRPCServer_BadTLS(t *testing.T) {
@@ -147,9 +160,7 @@ func TestGRPCServer_BadTLS(t *testing.T) {
 	appConfig.Security = secConfig
 	appConfig, gs, svc := setup(ctx, t, appConfig)
 	defer tearDown(gs, svc)
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC), sdk.WithCertificate(badCert, ""), sdk.WithCheckConnection(true))
-	require.Error(t, err)
-	require.Nil(t, client)
+	require.Error(t, pingWithCert(ctx, appConfig.Grpc.Port, badCert))
 }
 
 func TestGRPCServer_MTLS(t *testing.T) {

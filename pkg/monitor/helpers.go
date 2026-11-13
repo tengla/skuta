@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 )
 
 func responseToMessage(r *pb.Response, channel string) *pb.Event {

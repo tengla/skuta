@@ -7,7 +7,7 @@ import (
 	"github.com/tengla/skuta/pkg/logging"
 	"github.com/tengla/skuta/pkg/pipe"
 
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 	"io/ioutil"
 	"os"
 	"testing"

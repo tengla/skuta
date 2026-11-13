@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"crypto/rand"
-	"github.com/kubemq-io/kubemq-go/queues_stream"
 	"github.com/nats-io/nuid"
 	"github.com/tengla/skuta/pkg/entities"
 	"github.com/tengla/skuta/pkg/pipe"
@@ -17,7 +16,7 @@ import (
 	"github.com/tengla/skuta/services"
 
 	"github.com/fortytw2/leaktest"
-	pb "github.com/kubemq-io/protobuf/go"
+	"github.com/tengla/skuta/pkg/pb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +30,6 @@ import (
 
 	"fmt"
 
-	sdk "github.com/kubemq-io/kubemq-go"
 	"go.uber.org/atomic"
 )
 
@@ -121,17 +119,6 @@ func randStringBytes(n int) []byte {
 	}
 	return blk
 }
-func createBatchMessages(channel string, amount int) []*queues_stream.QueueMessage {
-	var list []*queues_stream.QueueMessage
-	for i := 0; i < amount; i++ {
-		list = append(list, queues_stream.NewQueueMessage().
-			SetId(uuid.New()).
-			SetChannel(channel).
-			SetBody([]byte(fmt.Sprintf("message %d", i))))
-	}
-	return list
-}
-
 func TestGRPCServer_SendEvents(t *testing.T) {
 	defer leaktest.Check(t)()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -890,21 +877,17 @@ func TestGRPCServer_Queue_SendAndReceive(t *testing.T) {
 	for i := 0; i < clients; i++ {
 		go func() {
 			defer wg.Done()
-			client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithTransportType(sdk.TransportTypeGRPC))
-			require.NoError(t, err)
+			client := newQueueClient(ctx, t, appConfig, "")
+			defer func() {
+				_ = client.Close()
+			}()
 			for i := 0; i < cycles; i++ {
 				channel := nuid.Next()
-				messages := client.QMB()
-				for i := 0; i < 1000; i++ {
-					msg := client.QM()
-					msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-					messages.Add(msg)
-				}
-				res, err := messages.Send(ctx)
+				res, err := client.sendBatch(ctx, client.messages(channel, 1000))
 				require.NoError(t, err)
 				require.NotNil(t, res)
 				require.Equal(t, 1000, len(res))
-				rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1000).SetWaitTimeSeconds(60).Send(ctx)
+				rxRes, err := client.receive(ctx, channel, 1000, 60, false)
 				require.NoError(t, err)
 				require.NotNil(t, rxRes)
 				require.Equal(t, 1000, len(rxRes.Messages))
@@ -922,28 +905,24 @@ func TestGRPCServer_Queue_SendAndReceiveWithPeak(t *testing.T) {
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId("some-client-id"), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "some-client-id")
+	defer func() {
+		_ = client.Close()
+	}()
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(ctx, client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err := client.receive(ctx, channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(10).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(ctx, channel, 10, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 10, len(rxRes.Messages))
@@ -955,40 +934,36 @@ func TestGRPCServer_Queue_SendAndReceiveWithAckAllAndPeak(t *testing.T) {
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId("some-client-id"), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "some-client-id")
+	defer func() {
+		_ = client.Close()
+	}()
 	channel := nuid.Next()
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
-	}
-	res, err := messages.Send(ctx)
+	res, err := client.sendBatch(ctx, client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err := client.receive(ctx, channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(ctx, channel, 5, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err = client.RQM().SetChannel(channel).SetMaxNumberOfMessages(5).SetWaitTimeSeconds(1).SetIsPeak(true).Send(ctx)
+	rxRes, err = client.receive(ctx, channel, 5, 1, true)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 5, len(rxRes.Messages))
 
 	time.Sleep(100 * time.Millisecond)
-	ackRes, err := client.AQM().SetChannel(channel).SetWaitTimeSeconds(1).Send(ctx)
+	ackRes, err := client.ackAll(ctx, channel, 1)
 	require.NoError(t, err)
 	require.NotNil(t, ackRes)
 
@@ -1000,77 +975,40 @@ func TestGRPCServer_Queue_SendAndStreamReceive(t *testing.T) {
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 	channel := nuid.Next()
 	counter := atomic.NewInt64(0)
-	go func() {
-		client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-		require.NoError(t, err)
-		defer func() {
-			_ = client2.Close()
+	for i := 0; i < 2; i++ {
+		go func() {
+			client2 := newQueueClient(ctx, t, appConfig, "")
+			defer func() {
+				_ = client2.Close()
+			}()
+
+			for {
+				if counter.Load() == 10 {
+					return
+				}
+				stream := client2.stream(channel)
+				msg, err := stream.next(ctx, 1, 5)
+				if err != nil {
+					continue
+				}
+				if msg != nil {
+					err = stream.ack()
+					require.NoError(t, err)
+					counter.Inc()
+				}
+
+				time.Sleep(110 * time.Millisecond)
+			}
 		}()
-
-		for {
-			if counter.Load() == 10 {
-				return
-			}
-			stream := client2.SQM().SetChannel(channel)
-			msg, err := stream.Next(ctx, 1, 5)
-			if err != nil {
-
-				continue
-			}
-			if msg != nil {
-
-				err = msg.Ack()
-				require.NoError(t, err)
-				counter.Inc()
-
-			}
-
-			time.Sleep(110 * time.Millisecond)
-		}
-	}()
-
-	go func() {
-		client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-		require.NoError(t, err)
-		defer func() {
-			_ = client2.Close()
-		}()
-
-		require.NoError(t, err)
-		for {
-			if counter.Load() == 10 {
-				return
-			}
-			stream := client2.SQM().SetChannel(channel)
-			msg, err := stream.Next(ctx, 1, 5)
-			if err != nil {
-
-				continue
-			}
-			if msg != nil {
-				err = msg.Ack()
-				require.NoError(t, err)
-				counter.Inc()
-
-			}
-			time.Sleep(110 * time.Millisecond)
-		}
-	}()
-	time.Sleep(2000 * time.Millisecond)
-	messages := client.QMB()
-	for i := 0; i < 10; i++ {
-		msg := client.QM()
-		msg.SetId(nuid.Next()).SetChannel(channel).SetBody([]byte(fmt.Sprintf("msg #%d", i)))
-		messages.Add(msg)
 	}
-	res, err := messages.Send(ctx)
+	time.Sleep(2000 * time.Millisecond)
+	res, err := client.sendBatch(ctx, client.messages(channel, 10))
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Equal(t, 10, len(res))
@@ -1087,46 +1025,39 @@ func TestGRPCServer_Queue_SendAndStreamReceiveWithReject(t *testing.T) {
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 
 	channel := "queue-channel"
 	newChannel := "dead-letter-channel"
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg reject")).
-		SetPolicyMaxReceiveCount(3).
-		SetPolicyMaxReceiveQueue(newChannel).Send(ctx)
+	msg := client.message(channel, []byte("msg reject"))
+	msg.Policy = &pb.QueueMessagePolicy{MaxReceiveCount: 3, MaxReceiveQueue: newChannel}
+	result, err := client.SendQueueMessage(ctx, msg)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client2 := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client2.Close()
 	}()
 
-	require.NoError(t, err)
 	for i := 0; i < 4; i++ {
-		stream := client2.SQM().SetChannel(channel)
-		msg, err := stream.Next(ctx, 1, 5)
+		stream := client2.stream(channel)
+		msg, err := stream.next(ctx, 1, 5)
 		if err != nil {
 			continue
 		}
 		if msg != nil {
-			err = msg.Reject()
+			err = stream.reject()
 			require.NoError(t, err)
 		}
 		time.Sleep(110 * time.Millisecond)
 	}
 	time.Sleep(100 * time.Millisecond)
-	rxRes, err := client.NewReceiveQueueMessagesRequest().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(10).Send(ctx)
+	rxRes, err := client.receive(ctx, newChannel, 1, 10, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -1138,48 +1069,41 @@ func TestGRPCServer_Queue_SendAndStreamReceiveWithDisconnect(t *testing.T) {
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 
 	channel := "queue-channel"
 	newChannel := "dead-letter-channel"
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg reject")).
-		SetPolicyMaxReceiveCount(3).
-		SetPolicyMaxReceiveQueue(newChannel).Send(ctx)
+	msg := client.message(channel, []byte("msg reject"))
+	msg.Policy = &pb.QueueMessagePolicy{MaxReceiveCount: 3, MaxReceiveQueue: newChannel}
+	result, err := client.SendQueueMessage(ctx, msg)
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
 
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i := 0; i < 4; i++ {
-			//ctx, cancel := context.WithCancel(ctx)
-			client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-			if err != nil {
-				continue
-			}
-			stream := client2.SQM().SetChannel(channel)
-			_, err = stream.Next(ctx, 1, 5)
+			// Each client takes the message and drops its connection without settling it.
+			client2 := newQueueClient(ctx, t, appConfig, "")
+			_, err := client2.stream(channel).next(ctx, 1, 5)
 			if err != nil {
 				fmt.Println(err)
 			}
-			//cancel()
 			_ = client2.Close()
-			//	time.Sleep(110 * time.Millisecond)
 		}
 
 	}()
 
-	rxRes, err := client.NewReceiveQueueMessagesRequest().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(10).Send(ctx)
+	rxRes, err := client.receive(ctx, newChannel, 1, 10, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
+	<-done
 
 }
 func TestGRPCServer_Queue_SendAndStreamReceiveWithExtendVisibility(t *testing.T) {
@@ -1188,38 +1112,33 @@ func TestGRPCServer_Queue_SendAndStreamReceiveWithExtendVisibility(t *testing.T)
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 
 	channel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg extend")).Send(ctx)
+	result, err := client.SendQueueMessage(ctx, client.message(channel, []byte("msg extend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client2 := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client2.Close()
 	}()
 
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	stream := client2.stream(channel)
+	msgRx, err := stream.next(ctx, 2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.ExtendVisibility(2)
+	err = stream.extendVisibility(2)
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.Ack()
+	err = stream.ack()
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(ctx, channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
@@ -1231,40 +1150,35 @@ func TestGRPCServer_Queue_SendAndStreamReceiveWithResendToNewQueue(t *testing.T)
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 
 	channel := nuid.Next()
 	newChannel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg resend")).Send(ctx)
+	result, err := client.SendQueueMessage(ctx, client.message(channel, []byte("msg resend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client2 := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client2.Close()
 	}()
 
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	stream := client2.stream(channel)
+	msgRx, err := stream.next(ctx, 2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = msgRx.Resend(newChannel)
+	err = stream.resend(newChannel)
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(ctx, channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
-	rxRes, err = client.RQM().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(ctx, newChannel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -1276,42 +1190,35 @@ func TestGRPCServer_Queue_SendAndStreamReceiveWithResendWithNewMessage(t *testin
 	appConfig, gs, svc := setup(ctx, t)
 	defer tearDown(gs, svc)
 	defer cancel()
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 
 	channel := nuid.Next()
 	newChannel := nuid.Next()
-	msg := client.QM()
-	result, err := msg.SetId(nuid.Next()).
-		SetChannel(channel).
-		SetBody([]byte("msg resend")).Send(ctx)
+	result, err := client.SendQueueMessage(ctx, client.message(channel, []byte("msg resend")))
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	time.Sleep(1000 * time.Millisecond)
-	client2, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client2 := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client2.Close()
 	}()
 
-	stream := client2.SQM().SetChannel(channel)
-	msgRx, err := stream.Next(ctx, 2, 5)
+	stream := client2.stream(channel)
+	msgRx, err := stream.next(ctx, 2, 5)
 	require.NoError(t, err)
 	require.NotNil(t, msgRx)
 	time.Sleep(1000 * time.Millisecond)
-	err = stream.ResendWithNewMessage(client.QM().SetId(nuid.Next()).
-		SetChannel(newChannel).
-		SetBody([]byte("new msg")))
+	err = stream.resendWithNewMessage(client.message(newChannel, []byte("new msg")))
 	require.NoError(t, err)
 	time.Sleep(1000 * time.Millisecond)
-	rxRes, err := client.RQM().SetChannel(channel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err := client.receive(ctx, channel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 0, len(rxRes.Messages))
-	rxRes, err = client.RQM().SetChannel(newChannel).SetMaxNumberOfMessages(1).SetWaitTimeSeconds(1).Send(ctx)
+	rxRes, err = client.receive(ctx, newChannel, 1, 1, false)
 	require.NoError(t, err)
 	require.NotNil(t, rxRes)
 	require.Equal(t, 1, len(rxRes.Messages))
@@ -1325,30 +1232,23 @@ func TestGRPCServer_PayloadSize(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	client, err := sdk.NewClient(ctx, sdk.WithAddress("0.0.0.0", appConfig.Grpc.Port), sdk.WithClientId(nuid.Next()), sdk.WithTransportType(sdk.TransportTypeGRPC))
-	require.NoError(t, err)
+	client := newQueueClient(ctx, t, appConfig, "")
 	defer func() {
 		_ = client.Close()
 	}()
 	channel := nuid.Next()
-	batch := client.NewQueueMessages()
+	var batch []*pb.QueueMessage
 	for j := 0; j < 100; j++ {
-		msgID := fmt.Sprintf("client-%d-%s", j, nuid.Next())
-		batch.Add(client.NewQueueMessage().
-			SetId(msgID).
-			SetChannel(channel).
-			SetBody(randStringBytes(100000)))
+		msg := client.message(channel, randStringBytes(100000))
+		msg.MessageID = fmt.Sprintf("client-%d-%s", j, nuid.Next())
+		batch = append(batch, msg)
 	}
-	results, err := batch.Send(ctx)
+	results, err := client.sendBatch(ctx, batch)
 	require.NoError(t, err)
 	for _, result := range results {
 		require.False(t, result.IsError)
 	}
-	receiveResult, err := client.NewReceiveQueueMessagesRequest().
-		SetChannel(channel).
-		SetMaxNumberOfMessages(100).
-		SetWaitTimeSeconds(60).
-		Send(ctx)
+	receiveResult, err := client.receive(ctx, channel, 100, 60, false)
 	require.NoError(t, err)
 	require.NotNil(t, receiveResult)
 	require.False(t, receiveResult.IsError)
@@ -1362,13 +1262,14 @@ func TestGRPCServer_QueuesClient_Send(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
-	messages := createBatchMessages("queues_stream.send", 10)
-	result, err := queueClient.Send(ctx, messages...)
+	defer queues.close()
+	result, err := queues.send(ctx, client.messages("queues_stream.send", 10))
 	require.NoError(t, err)
 	require.EqualValues(t, 10, len(result.Results))
 	for _, messageResult := range result.Results {
@@ -1383,13 +1284,14 @@ func TestGRPCServer_QueuesClient_Send_WithInvalid_Data(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
-	messages := createBatchMessages("", 10)
-	result, err := queueClient.Send(ctx, messages...)
+	defer queues.close()
+	result, err := queues.send(ctx, client.messages("", 10))
 	require.NoError(t, err)
 	require.EqualValues(t, 10, len(result.Results))
 	for _, messageResult := range result.Results {
@@ -1404,11 +1306,13 @@ func TestGRPCServer_QueuesClient_Send_Concurrent(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	counter := *atomic.NewInt32(0)
 	wg := sync.WaitGroup{}
 	wg.Add(20)
@@ -1416,8 +1320,7 @@ func TestGRPCServer_QueuesClient_Send_Concurrent(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		go func(index int) {
 			defer wg.Done()
-			messages := createBatchMessages(fmt.Sprintf("queues_stream.send.%d", index), 20000)
-			result, err := queueClient.Send(ctx, messages...)
+			result, err := queues.send(ctx, client.messages(fmt.Sprintf("queues_stream.send.%d", index), 20000))
 			require.NoError(t, err)
 			require.EqualValues(t, 20000, len(result.Results))
 			for _, messageResult := range result.Results {
@@ -1438,34 +1341,25 @@ func TestGRPCServer_QueuesClient_Poll_AutoAck(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 10
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
-	require.EqualValues(t, 10, len(result.Results))
+	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, len(response2.Messages))
 }
@@ -1477,40 +1371,30 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_AckAll(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 10
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
-	require.EqualValues(t, 10, len(result.Results))
+	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
-	err = response.AckAll()
+	err = response.ackAll()
 	require.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
-	err = response.AckAll()
+	err = response.ackAll()
 	require.NoError(t, err)
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, len(response2.Messages))
 }
@@ -1522,42 +1406,28 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_NAckAll(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 10
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
-	require.EqualValues(t, 10, len(result.Results))
+	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
-
-	err = response.NAckAll()
+	err = response.nackAll()
 	require.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
-	//require.Error(t, response.NAckAll())
-
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response2.Messages))
 }
@@ -1569,49 +1439,32 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_ReQueueAll(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 10
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
-	require.EqualValues(t, 10, len(result.Results))
+	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
 	reQueueChannel := uuid.New()
-	err = response.ReQueueAll(reQueueChannel)
+	err = response.reQueueAll(reQueueChannel)
 	require.NoError(t, err)
 	time.Sleep(100 * time.Millisecond)
-	//	require.Error(t, response.ReQueueAll(reQueueChannel))
-
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, len(response2.Messages))
-	pollRequest3 := queues_stream.NewPollRequest().
-		SetChannel(reQueueChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response3, err := queueClient.Poll(ctx, pollRequest3)
+	response3, err := queues.poll(ctx, reQueueChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response3.Messages))
 }
@@ -1623,38 +1476,29 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_AckRange(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 1000
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
 	for i, msg := range response.Messages {
-		err := msg.Ack()
+		err := response.ack(msg)
 		require.NoErrorf(t, err, "msg id %d", i)
 	}
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, len(response2.Messages))
 }
@@ -1666,38 +1510,29 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_NAckRange(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 1000
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
 	for i, msg := range response.Messages {
-		err := msg.NAck()
+		err := response.nack(msg)
 		require.NoErrorf(t, err, "msg id %d", i)
 	}
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response2.Messages))
 }
@@ -1709,47 +1544,33 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_ReQueueRange(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 1000
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
 	reQueueChannel := uuid.New()
 	for i, msg := range response.Messages {
-		err := msg.ReQueue(reQueueChannel)
+		err := response.reQueue(msg, reQueueChannel)
 		require.NoErrorf(t, err, "msg id %d", i)
 	}
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(reQueueChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, reQueueChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response2.Messages))
-	pollRequest3 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response3, err := queueClient.Poll(ctx, pollRequest3)
+	response3, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, len(response3.Messages))
 }
@@ -1761,36 +1582,27 @@ func TestGRPCServer_QueuesClient_Poll_ManualAck_Close(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
+	defer queues.close()
 	testChannel := uuid.New()
 	messagesCount := 1000
-	messages := createBatchMessages(testChannel, messagesCount)
-	result, err := queueClient.Send(ctx, messages...)
+	result, err := queues.send(ctx, client.messages(testChannel, messagesCount))
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(result.Results))
 	for _, messageResult := range result.Results {
 		require.False(t, messageResult.IsError)
 	}
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(false).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	response, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, false)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response.Messages))
-	err = response.Close()
+	err = response.closeByClient()
 	require.NoError(t, err)
-	pollRequest2 := queues_stream.NewPollRequest().
-		SetChannel(testChannel).
-		SetAutoAck(true).
-		SetMaxItems(messagesCount).
-		SetWaitTimeout(1000)
-	response2, err := queueClient.Poll(ctx, pollRequest2)
+	response2, err := queues.poll(ctx, testChannel, int32(messagesCount), 1000, true)
 	require.NoError(t, err)
 	require.EqualValues(t, messagesCount, len(response2.Messages))
 }
@@ -1802,17 +1614,14 @@ func TestGRPCServer_QueuesClient_Poll_InvalidRequest(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel("").
-		SetAutoAck(false).
-		SetMaxItems(0).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	defer queues.close()
+	response, err := queues.poll(ctx, "", 0, 1000, false)
 	require.Error(t, err)
 	require.Nil(t, response)
 
@@ -1825,17 +1634,14 @@ func TestGRPCServer_QueuesClient_Poll_InvalidRequestByServer(t *testing.T) {
 	defer tearDown(gs, svc)
 	defer cancel()
 	time.Sleep(time.Second)
-	queueClient, err := queues_stream.NewQueuesStreamClient(ctx,
-		queues_stream.WithAddress("0.0.0.0", appConfig.Grpc.Port),
-		queues_stream.WithClientId(uuid.New()),
-	)
+	client := newQueueClient(ctx, t, appConfig, "")
+	defer func() {
+		_ = client.Close()
+	}()
+	queues, err := client.queuesStream(ctx)
 	require.NoError(t, err)
-	pollRequest := queues_stream.NewPollRequest().
-		SetChannel(">").
-		SetAutoAck(false).
-		SetMaxItems(0).
-		SetWaitTimeout(1000)
-	response, err := queueClient.Poll(ctx, pollRequest)
+	defer queues.close()
+	response, err := queues.poll(ctx, ">", 0, 1000, false)
 	require.Error(t, err)
 	require.Nil(t, response)
 

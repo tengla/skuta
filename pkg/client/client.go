@@ -2,9 +2,9 @@ package client
 
 import (
 	"fmt"
-	pb "github.com/kubemq-io/protobuf/go"
 	"github.com/nats-io/nuid"
 	"github.com/tengla/skuta/pkg/entities"
+	"github.com/tengla/skuta/pkg/pb"
 
 	"sync"
 	"time"
